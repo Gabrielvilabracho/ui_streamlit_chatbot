@@ -1,0 +1,15 @@
+# Local AI runtime state
+.atl/
+
+# Python runtime and tool caches
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+
+# Local credentials and environment overrides
+.env
+.streamlit/secrets.toml

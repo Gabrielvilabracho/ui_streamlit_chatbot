@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "contavia-cortex-rag"
+version = "0.1.0"
+description = "Clean Architecture RAG chat application with Snowflake Cortex and Streamlit."
+requires-python = ">=3.11"
+dependencies = [
+  "snowflake>=0.8.0,<2",
+  "snowflake-snowpark-python>=1.20.0,<2",
+  "streamlit>=1.57.0,<2",
+]
+
+[project.optional-dependencies]
+dev = [
+  "mypy>=1.14,<2",
+  "pytest>=8.2,<9",
+  "pytest-cov>=5,<7",
+  "ruff>=0.8,<1",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+packages = ["rag_chat"]
