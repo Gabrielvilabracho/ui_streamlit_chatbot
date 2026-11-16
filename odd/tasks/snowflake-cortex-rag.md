@@ -22,9 +22,9 @@ S8. Assumption: no live Snowflake account, credentials, database, schema, or Cor
 
 ## Tasks
 
-- T1 · S1-S2, S6, S8 · Route: inline (no writer trigger; one cohesive core behavior) · Status: completed · Commit: pending first work-unit commit · Build domain entities, application ports/orchestrator, configuration, Snowflake adapters, and RED→GREEN unit tests. Risk: item 2 (credential handling) and item 5 (new dependencies).
-- T2 · S3-S5, S7 · Route: inline (no writer trigger; UI depends on T1) · Status: in progress · Commit: pending · Build `app.py`, chat presentation helpers, CONTAVIA theme/CSS, controls, status checklist, sources, feedback, metrics, and UI-focused tests. Risk: none expected.
-- T3 · S1, S4, S8 · Route: inline (no writer trigger; operational docs depend on final interfaces) · Status: pending · Commit: pending · Add Snowflake setup SQL, environment examples, README architecture/runbook, timeout guidance, and complete verification. Risk: item 5 (environment/dependency setup).
+- T1 · S1-S2, S6, S8 · Route: inline (no writer trigger; one cohesive core behavior) · Status: completed · Commit: `1189184` with cleanup `a78325d` · Build domain entities, application ports/orchestrator, configuration, Snowflake adapters, and RED→GREEN unit tests. Risk: item 2 (credential handling) and item 5 (new dependencies).
+- T2 · S3-S5, S7 · Route: inline (no writer trigger; UI depends on T1) · Status: completed · Commit: pending second work-unit commit · Build `app.py`, chat presentation helpers, CONTAVIA theme/CSS, controls, status checklist, sources, feedback, metrics, and UI-focused tests. Risk: item 2 (sanitized custom clipboard JavaScript boundary).
+- T3 · S1, S4, S8 · Route: inline (no writer trigger; operational docs depend on final interfaces) · Status: in progress · Commit: pending · Add Snowflake setup SQL, environment examples, README architecture/runbook, timeout guidance, and complete verification. Risk: item 5 (environment/dependency setup).
 
 ## Log
 
@@ -38,3 +38,10 @@ S8. Assumption: no live Snowflake account, credentials, database, schema, or Cor
 - L8 · 2026-11-16 · T1 GREEN: `uv run pytest tests/unit/test_orchestrator.py tests/unit/test_snowflake_settings.py tests/unit/test_cortex_complete.py tests/unit/test_cortex_search.py tests/architecture/test_clean_architecture_boundaries.py -q` passed 9 tests; `uv run ruff check src tests` passed; `uv run mypy src` passed 16 source files.
 - L9 · 2026-11-16 · T1 exceeds the ~400-line heuristic because the first runnable work unit must include dependency metadata, domain contracts, the application use case, both Snowflake adapters, security-safe configuration, and their tests together. Splitting by file type would leave non-runnable commits.
 - L10 · 2026-11-16 · Next: commit T1, record its identity, then implement T2 with RED→GREEN UI helper tests.
+- L11 · 2026-11-16 · T1 commits: `1189184 feat(rag): add Snowflake Cortex core`; `a78325d chore: ignore generated package metadata` removes build-generated `*.egg-info` accidentally captured by the initial root commit and prevents recurrence.
+- L12 · 2026-11-16 · Next: implement T2 with RED→GREEN UI helper tests.
+- L13 · 2026-11-16 · T2 RED: `uv run pytest tests/unit/test_ui_state.py -q` failed during collection with `ModuleNotFoundError: No module named 'rag_chat.ui.state'`.
+- L14 · 2026-11-16 · T2 GREEN: `uv run pytest tests -q` passed 17 tests; `uv run ruff check app.py src tests` passed; `uv run mypy app.py src` passed 22 source files. Streamlit `AppTest` verified onboarding, disabled input without credentials, chat history, five orchestration checkboxes, sources, retry, feedback, copy markup, and passive token/latency metrics.
+- L15 · 2026-11-16 · Runtime evidence: a local headless Streamlit 1.67 server returned Agent API `status: ready`, rendered the expected configuration-safe shell, and produced `console_warnings=0`; no Snowflake connection was attempted.
+- L16 · 2026-11-16 · T2 keeps the root entrypoint, presentation state, controls, semantic theme, custom clipboard boundary, and AppTest coverage together because they form one UI behavior. The custom JavaScript receives answer text only as base64 and never interpolates it into executable code.
+- L17 · 2026-11-16 · Next: commit T2, record its identity, then complete T3 documentation and operational setup.

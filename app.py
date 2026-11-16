@@ -1,0 +1,62 @@
+"""Streamlit composition root for the CONTAVIA RAG application."""
+
+from __future__ import annotations
+
+import os
+from collections.abc import Mapping
+from functools import partial
+from typing import Any
+
+import streamlit as st
+
+from rag_chat.application.orchestrator import RagOrchestrator
+from rag_chat.composition import build_orchestrator
+from rag_chat.domain.errors import ConfigurationError
+from rag_chat.infrastructure.snowflake.settings import SnowflakeSettings
+from rag_chat.ui.streamlit_app import OrchestratorFactory, run_app
+
+DEFAULT_MODELS = ("llama3.3-70b", "mistral-large2", "snowflake-arctic")
+
+
+@st.cache_resource(show_spinner=False)
+def _cached_orchestrator(settings: SnowflakeSettings) -> RagOrchestrator:
+    return build_orchestrator(settings)
+
+
+def _secret_values() -> Mapping[str, Any]:
+    try:
+        return st.secrets.to_dict()
+    except Exception:
+        return {}
+
+
+st.set_page_config(
+    page_title="CONTAVIA Knowledge",
+    page_icon=":material/auto_awesome:",
+    layout="centered",
+    initial_sidebar_state="expanded",
+)
+
+configuration_error: str | None = None
+orchestrator_factory: OrchestratorFactory | None = None
+try:
+    snowflake_settings = SnowflakeSettings.from_sources(
+        secrets=_secret_values(),
+        environ=os.environ,
+    )
+except ConfigurationError as error:
+    configuration_error = str(error)
+else:
+    orchestrator_factory = partial(_cached_orchestrator, snowflake_settings)
+
+configured_models = tuple(
+    model.strip()
+    for model in os.getenv("RAG_MODELS", ",".join(DEFAULT_MODELS)).split(",")
+    if model.strip()
+)
+
+run_app(
+    orchestrator_factory=orchestrator_factory,
+    models=configured_models or DEFAULT_MODELS,
+    configuration_error=configuration_error,
+)
