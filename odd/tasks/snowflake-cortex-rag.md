@@ -23,8 +23,8 @@ S8. Assumption: no live Snowflake account, credentials, database, schema, or Cor
 ## Tasks
 
 - T1 · S1-S2, S6, S8 · Route: inline (no writer trigger; one cohesive core behavior) · Status: completed · Commit: `1189184` with cleanup `a78325d` · Build domain entities, application ports/orchestrator, configuration, Snowflake adapters, and RED→GREEN unit tests. Risk: item 2 (credential handling) and item 5 (new dependencies).
-- T2 · S3-S5, S7 · Route: inline (no writer trigger; UI depends on T1) · Status: completed · Commit: pending second work-unit commit · Build `app.py`, chat presentation helpers, CONTAVIA theme/CSS, controls, status checklist, sources, feedback, metrics, and UI-focused tests. Risk: item 2 (sanitized custom clipboard JavaScript boundary).
-- T3 · S1, S4, S8 · Route: inline (no writer trigger; operational docs depend on final interfaces) · Status: in progress · Commit: pending · Add Snowflake setup SQL, environment examples, README architecture/runbook, timeout guidance, and complete verification. Risk: item 5 (environment/dependency setup).
+- T2 · S3-S5, S7 · Route: inline (no writer trigger; UI depends on T1) · Status: completed · Commit: `58a41e3` · Build `app.py`, chat presentation helpers, CONTAVIA theme/CSS, controls, status checklist, sources, feedback, metrics, and UI-focused tests. Risk: item 2 (sanitized custom clipboard JavaScript boundary).
+- T3 · S1, S4, S8 · Route: inline (no writer trigger; operational docs depend on final interfaces) · Status: completed · Commit: pending third work-unit commit · Add Snowflake setup SQL, environment examples, README architecture/runbook, timeout guidance, and complete verification. Risk: item 5 (environment/dependency setup).
 
 ## Log
 
@@ -45,3 +45,10 @@ S8. Assumption: no live Snowflake account, credentials, database, schema, or Cor
 - L15 · 2026-11-16 · Runtime evidence: a local headless Streamlit 1.67 server returned Agent API `status: ready`, rendered the expected configuration-safe shell, and produced `console_warnings=0`; no Snowflake connection was attempted.
 - L16 · 2026-11-16 · T2 keeps the root entrypoint, presentation state, controls, semantic theme, custom clipboard boundary, and AppTest coverage together because they form one UI behavior. The custom JavaScript receives answer text only as base64 and never interpolates it into executable code.
 - L17 · 2026-11-16 · Next: commit T2, record its identity, then complete T3 documentation and operational setup.
+- L18 · 2026-11-16 · T2 commit: `58a41e3 feat(ui): add Streamlit RAG chat experience`.
+- L19 · 2026-11-16 · Next: complete T3 documentation, environment examples, Snowflake SQL, and final checks.
+- L20 · 2026-11-16 · T3 RED: `uv run pytest tests/unit/test_project_artifacts.py -q` failed four tests because `README.md`, `sql/bootstrap.sql`, the configuration templates, and `docs/operations.md` did not exist.
+- L21 · 2026-11-16 · T3 GREEN: `uv run pytest tests -q` passed 21 tests; `uv run ruff check app.py src tests` passed; `uv run mypy app.py src` passed 22 source files; `uv lock --check` resolved 78 packages without drift.
+- L22 · 2026-11-16 · Security evidence: Gitleaks scanned all tracked and non-ignored worktree files (~634 KB) with no leaks. Two earlier findings were confirmed false positives inside ignored `.venv` JavaScript source maps and were excluded by scanning only repository-relevant files.
+- L23 · 2026-11-16 · Repository permissions deny agent writes to secret-like template paths such as `.env.example` and `.streamlit/secrets.toml.example`. Safe examples live under `config/` and the README instructs the operator to copy them into ignored runtime locations manually.
+- L24 · 2026-11-16 · Next: commit T3, record its identity, run the named high-risk independent verifier, and complete native review assessment.

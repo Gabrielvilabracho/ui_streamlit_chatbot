@@ -1,0 +1,13 @@
+[snowflake]
+account = "replace-me"
+user = "replace-me"
+password = "replace-me"
+warehouse = "CONTAVIA_RAG_WH"
+database = "CONTAVIA"
+schema = "KNOWLEDGE"
+role = "CONTAVIA_RAG_APP"
+search_service = "DOCUMENT_SEARCH"
+content_column = "CHUNK"
+id_column = "CHUNK_ID"
+title_column = "TITLE"
+uri_column = "SOURCE_URL"
