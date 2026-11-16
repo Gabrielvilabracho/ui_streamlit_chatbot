@@ -63,3 +63,4 @@ S8. Assumption: no live Snowflake account, credentials, database, schema, or Cor
 - L33 · 2026-11-16 · Final verification: `uv run pytest tests -q` passed 22 tests with six known `importlib.metadata` deprecation warnings; `uv run ruff check app.py src tests` passed; `uv run mypy app.py src` passed 22 source files; `uv lock --check` resolved 78 packages without drift; `git diff --check` passed.
 - L34 · 2026-11-16 · User decision (verbatim): "desactivalo para ese clon y continuar".
 - L35 · 2026-11-16 · Receipt-driven development was disabled for this clone only. Effective mode: `off`; deciding source: `clone_local`; global mode remains `on`. Delivery continues under ordinary repository policy as `disabled/unmanaged`.
+- L36 · 2026-11-16 · User pause request (verbatim): "antes de publicar eja todo guardado y continuamos en la siguiente session c". No remote publication was authorized or attempted; resume from the clean local feature branch in the next session.
