@@ -66,3 +66,35 @@ def test_fake_chat_flow_renders_checklist_sources_controls_and_metrics() -> None
     assert any(item.label == "Retry" for item in app.button)
     html_values = [item.value for item in app.html]
     assert any("Input 20" in value and "Output 5" in value for value in html_values)
+
+
+def test_retry_replaces_answer_without_duplicate_widget_keys() -> None:
+    script = """
+from rag_chat.domain.models import RagAnswer, TokenUsage
+from rag_chat.ui.streamlit_app import run_app
+
+class FakeOrchestrator:
+    def answer(self, *, question, model, history=(), on_progress=None):
+        return RagAnswer(
+            content="Grounded answer.",
+            model=model,
+            sources=(),
+            usage=TokenUsage(),
+            latency_ms=1,
+        )
+
+run_app(
+    orchestrator_factory=FakeOrchestrator,
+    models=("test-model",),
+    configuration_error=None,
+)
+"""
+    app = AppTest.from_string(script, default_timeout=10).run()
+    app.chat_input(key="chat_prompt").set_value("Question").run()
+    assert not app.exception
+
+    next(button for button in app.button if button.label == "Retry").click().run()
+
+    assert not app.exception
+    assert sum(item.value == "Grounded answer." for item in app.markdown) == 1
+    assert len(app.feedback) == 1

@@ -23,8 +23,8 @@ S8. Assumption: no live Snowflake account, credentials, database, schema, or Cor
 ## Tasks
 
 - T1 · S1-S2, S6, S8 · Route: inline (no writer trigger; one cohesive core behavior) · Status: completed · Commit: `1189184` with cleanup `a78325d` · Build domain entities, application ports/orchestrator, configuration, Snowflake adapters, and RED→GREEN unit tests. Risk: item 2 (credential handling) and item 5 (new dependencies).
-- T2 · S3-S5, S7 · Route: inline (no writer trigger; UI depends on T1) · Status: completed · Commit: `58a41e3` · Build `app.py`, chat presentation helpers, CONTAVIA theme/CSS, controls, status checklist, sources, feedback, metrics, and UI-focused tests. Risk: item 2 (sanitized custom clipboard JavaScript boundary).
-- T3 · S1, S4, S8 · Route: inline (no writer trigger; operational docs depend on final interfaces) · Status: completed · Commit: pending third work-unit commit · Add Snowflake setup SQL, environment examples, README architecture/runbook, timeout guidance, and complete verification. Risk: item 5 (environment/dependency setup).
+- T2 · S3-S5, S7 · Route: inline (no writer trigger; UI depends on T1) · Status: completed after verifier correction · Commit: `58a41e3`; correction pending · Build `app.py`, chat presentation helpers, CONTAVIA theme/CSS, controls, status checklist, sources, feedback, metrics, and UI-focused tests. Risk: item 2 (sanitized custom clipboard JavaScript boundary).
+- T3 · S1, S4, S8 · Route: inline (no writer trigger; operational docs depend on final interfaces) · Status: completed · Commit: `7b937d8` · Add Snowflake setup SQL, environment examples, README architecture/runbook, timeout guidance, and complete verification. Risk: item 5 (environment/dependency setup).
 
 ## Log
 
@@ -52,3 +52,8 @@ S8. Assumption: no live Snowflake account, credentials, database, schema, or Cor
 - L22 · 2026-11-16 · Security evidence: Gitleaks scanned all tracked and non-ignored worktree files (~634 KB) with no leaks. Two earlier findings were confirmed false positives inside ignored `.venv` JavaScript source maps and were excluded by scanning only repository-relevant files.
 - L23 · 2026-11-16 · Repository permissions deny agent writes to secret-like template paths such as `.env.example` and `.streamlit/secrets.toml.example`. Safe examples live under `config/` and the README instructs the operator to copy them into ignored runtime locations manually.
 - L24 · 2026-11-16 · Next: commit T3, record its identity, run the named high-risk independent verifier, and complete native review assessment.
+- L25 · 2026-11-16 · T3 commit: `7b937d8 docs(rag): add Snowflake deployment runbook`.
+- L26 · 2026-11-16 · Next: run the named high-risk independent verifier, record the verdict, then complete native review assessment and final evidence.
+- L27 · 2026-11-16 · Independent verifier result: blocked S3 because retry rendered the existing control row and a replacement row with the same widget keys in one Streamlit run, raising `StreamlitDuplicateElementKey`. S1-S2 and S4-S8 passed.
+- L28 · 2026-11-16 · Correction RED: `uv run pytest tests/ui/test_streamlit_app.py::test_retry_replaces_answer_without_duplicate_widget_keys -q` reproduced the duplicate `retry_assistant-<id>` key. GREEN: the same command passed after replacement responses updated session state and returned before rendering duplicate controls; the full suite then passed 22 tests, Ruff passed, and mypy passed 22 source files.
+- L29 · 2026-11-16 · Next: commit the bounded retry correction and run one verifier recheck limited to the original S3 blocker.

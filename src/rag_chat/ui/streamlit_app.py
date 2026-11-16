@@ -192,7 +192,6 @@ def _generate_answer(
             state="complete",
             expanded=False,
         )
-        st.markdown(answer.content)
         message = assistant_message(
             question=question,
             answer=answer,
@@ -201,8 +200,10 @@ def _generate_answer(
         messages = _messages()
         if replace_message_id:
             st.session_state.messages = list(replace_message(messages, message))
-        else:
-            st.session_state.messages = [*messages, message]
+            return
+
+        st.session_state.messages = [*messages, message]
+        st.markdown(answer.content)
         _render_sources(message)
         _render_controls(message)
 
