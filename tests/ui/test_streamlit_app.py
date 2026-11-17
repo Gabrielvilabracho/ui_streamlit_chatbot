@@ -60,6 +60,7 @@ def test_fake_chat_flow_renders_checklist_sources_controls_and_metrics() -> None
     assert not app.exception
     assert any(item.value == "Grounded answer [1]." for item in app.markdown)
     assert any("Source title" in item.value for item in app.markdown)
+    assert any("Source title" in item.value for item in app.sidebar.markdown)
     assert len(app.checkbox) == 5
     assert all(item.value is True and item.disabled for item in app.checkbox)
     assert len(app.feedback) == 1
