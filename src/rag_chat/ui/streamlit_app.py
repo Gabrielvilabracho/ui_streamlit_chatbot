@@ -10,7 +10,7 @@ from uuid import uuid4
 
 import streamlit as st
 
-from rag_chat.application.orchestrator import RagOrchestrator
+from rag_chat.application.ports import AnswerService
 from rag_chat.domain.errors import RagError, RagTimeoutError
 from rag_chat.domain.models import ChatMessage, OrchestrationStep
 from rag_chat.ui.markup import (
@@ -27,7 +27,7 @@ from rag_chat.ui.state import (
     user_message,
 )
 
-OrchestratorFactory = Callable[[], RagOrchestrator]
+OrchestratorFactory = Callable[[], AnswerService]
 BRAND_ASSET_DIR = Path(__file__).resolve().parents[3] / "static" / "brand"
 BRAND_MARK = BRAND_ASSET_DIR / "sofinco-mark.png"
 BRAND_WORDMARK = BRAND_ASSET_DIR / "sofinco_logo.png"
