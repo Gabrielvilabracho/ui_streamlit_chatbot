@@ -1,0 +1,77 @@
+name: Dependency upgrade
+description: Propose and validate an application or development dependency upgrade.
+title: "[Dependency]: "
+labels:
+  - dependencies
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Document the requested version change and the evidence needed to review it safely.
+
+  - type: input
+    id: package
+    attributes:
+      label: Package
+      description: Name the package or tool being upgraded.
+      placeholder: pytest
+    validations:
+      required: true
+
+  - type: input
+    id: versions
+    attributes:
+      label: Version change
+      description: Provide the current and target versions.
+      placeholder: 8.4.2 to 9.0.3
+    validations:
+      required: true
+
+  - type: dropdown
+    id: dependency-scope
+    attributes:
+      label: Dependency scope
+      description: Select where the dependency is used.
+      options:
+        - Development and testing
+        - Production runtime
+        - Build and delivery
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: Explain why the upgrade is needed, including security or compatibility context.
+    validations:
+      required: true
+
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Compatibility evidence
+      description: List the checks already run and their observed results.
+      placeholder: Tests, linting, type checking, lockfile validation, and compatibility review.
+    validations:
+      required: true
+
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks and rollback
+      description: Describe known risks and how to revert the upgrade if needed.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: readiness
+    attributes:
+      label: Readiness checklist
+      options:
+        - label: The target release notes have been reviewed.
+          required: true
+        - label: The dependency lockfile has been updated or verified.
+          required: true
+        - label: The relevant test suite has passed with the target version.
+          required: true
