@@ -6,7 +6,7 @@ from collections.abc import Sequence
 
 from rag_chat.domain.models import ChatMessage, SourceDocument
 
-SYSTEM_PROMPT = """You are CONTAVIA Knowledge Assistant.
+SYSTEM_PROMPT = """You are Sof~IA Knowledge Assistant.
 Answer the user's question using only the supplied trusted context.
 When the context supports a statement, cite its source with [n], matching the source number.
 If the context is insufficient, say that the available sources do not contain the answer.

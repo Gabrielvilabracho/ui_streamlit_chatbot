@@ -1,4 +1,4 @@
-# CONTAVIA Snowflake Cortex RAG
+# Sof~IA Snowflake Cortex RAG
 
 A grounded knowledge assistant built with Clean Architecture, Snowflake Cortex Search, Snowflake `AI_COMPLETE`, and Streamlit. The UI keeps retrieval sources, execution status, feedback, token usage, and latency visible without coupling presentation code to Snowflake.
 

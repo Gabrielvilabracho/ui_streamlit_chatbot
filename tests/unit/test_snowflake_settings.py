@@ -14,7 +14,7 @@ def test_settings_load_nested_streamlit_secrets_without_exposing_password() -> N
                 "user": "rag_user",
                 "password": "very-secret",
                 "warehouse": "RAG_WH",
-                "database": "CONTAVIA",
+                "database": "SOFIA",
                 "schema": "KNOWLEDGE",
                 "role": "RAG_APP_ROLE",
                 "search_service": "DOCUMENT_SEARCH",

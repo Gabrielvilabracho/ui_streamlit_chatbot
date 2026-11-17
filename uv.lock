@@ -382,7 +382,7 @@ wheels = [
 ]
 
 [[package]]
-name = "contavia-cortex-rag"
+name = "sofia-cortex-rag"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

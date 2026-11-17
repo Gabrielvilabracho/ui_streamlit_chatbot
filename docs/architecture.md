@@ -63,9 +63,9 @@ New adapters should translate provider exceptions into domain-safe errors at the
 
 ## Visual system
 
-`.streamlit/config.toml` carries native Streamlit theme tokens. `src/rag_chat/ui/markup.py` adds only the requested CONTAVIA-specific typography, onboarding, copy control, and passive metric badges.
+`.streamlit/config.toml` carries native Streamlit theme tokens. `src/rag_chat/ui/markup.py` adds only the requested Sof~IA-specific typography, onboarding, copy control, and passive metric badges.
 
-Semantic values are sourced from the provided CONTAVIA reference:
+Semantic values retain the approved Sof~IA palette reference:
 
 | Role | Value |
 | --- | --- |

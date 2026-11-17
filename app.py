@@ -1,4 +1,4 @@
-"""Streamlit composition root for the CONTAVIA RAG application."""
+"""Streamlit composition root for the Sof~IA RAG application."""
 
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ def _secret_values() -> Mapping[str, Any]:
 
 
 st.set_page_config(
-    page_title="CONTAVIA Knowledge",
+    page_title="Sof~IA Knowledge",
     page_icon=":material/auto_awesome:",
     layout="centered",
     initial_sidebar_state="expanded",

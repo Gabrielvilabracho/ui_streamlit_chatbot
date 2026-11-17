@@ -24,7 +24,7 @@ def test_metric_plugin_renders_passive_token_and_latency_values() -> None:
     assert "<script" not in markup
 
 
-def test_theme_css_carries_the_contavia_semantic_palette_and_typography() -> None:
+def test_theme_css_carries_the_sofia_semantic_palette_and_typography() -> None:
     css = theme_css()
 
     for color in ("#17ABB5", "#1AAEB7", "#CFEFF0", "#EAF5F7", "#222222"):
@@ -32,3 +32,5 @@ def test_theme_css_carries_the_contavia_semantic_palette_and_typography() -> Non
     assert "Helvetica Neue" in css
     assert "Suisse International" in css
     assert "Neue Montreal" in css
+    assert "--sofia-primary" in css
+    assert ".sofia-onboarding" in css

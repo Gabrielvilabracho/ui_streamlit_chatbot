@@ -1,1 +1,1 @@
-"""CONTAVIA Snowflake Cortex RAG application."""
+"""Sof~IA Snowflake Cortex RAG application."""
