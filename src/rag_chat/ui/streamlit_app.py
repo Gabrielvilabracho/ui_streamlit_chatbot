@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from pathlib import Path
 from typing import Literal, cast
 from urllib.parse import urlparse
 from uuid import uuid4
@@ -27,6 +28,9 @@ from rag_chat.ui.state import (
 )
 
 OrchestratorFactory = Callable[[], RagOrchestrator]
+BRAND_ASSET_DIR = Path(__file__).resolve().parents[3] / "static" / "brand"
+BRAND_MARK = BRAND_ASSET_DIR / "sofinco-mark.png"
+BRAND_WORDMARK = BRAND_ASSET_DIR / "sofinco_logo.png"
 
 
 def run_app(
@@ -39,6 +43,7 @@ def run_app(
 
     _initialize_state()
     st.html(theme_css(st.context.theme.type))
+    st.logo(str(BRAND_WORDMARK), size="large", icon_image=str(BRAND_MARK))
     selected_model = _render_sidebar(models, configuration_error)
     sidebar_sources = st.sidebar.empty()
 
@@ -47,7 +52,7 @@ def run_app(
             _render_sidebar_sources(_latest_assistant_message())
 
     refresh_sidebar_sources()
-    st.title("Ask Sof~IA")
+    _render_brand_title()
     st.caption("Grounded answers from approved Snowflake knowledge")
     st.html(onboarding_html())
 
@@ -98,6 +103,16 @@ def run_app(
 def _initialize_state() -> None:
     if "messages" not in st.session_state:
         st.session_state.messages = []
+
+
+def _render_brand_title() -> None:
+    with st.container(horizontal=True, vertical_alignment="center"):
+        st.image(
+            str(BRAND_MARK),
+            alt="Sofinco mark",
+            width=64,
+        )
+        st.title("Ask Sof~IA")
 
 
 def _messages() -> tuple[UiMessage, ...]:
@@ -160,7 +175,8 @@ def _render_sidebar_sources(message: UiMessage | None) -> None:
 def _render_history() -> UiMessage | None:
     retry_request: UiMessage | None = None
     for message in _messages():
-        with st.chat_message(message.role):
+        avatar = str(BRAND_MARK) if message.role == "assistant" else None
+        with st.chat_message(message.role, avatar=avatar):
             st.markdown(message.content)
             if message.role == "assistant":
                 _render_sources(message)
@@ -179,7 +195,7 @@ def _generate_answer(
     replace_message_id: str | None = None,
 ) -> None:
     request_id = replace_message_id or _message_id("assistant")
-    with st.chat_message("assistant"):
+    with st.chat_message("assistant", avatar=str(BRAND_MARK)):
         status = st.status(
             ":shimmer[Running grounded answer workflow]",
             expanded=True,
