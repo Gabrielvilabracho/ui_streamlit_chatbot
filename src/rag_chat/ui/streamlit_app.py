@@ -38,18 +38,20 @@ def run_app(
     orchestrator_factory: OrchestratorFactory | None,
     models: tuple[str, ...],
     configuration_error: str | None,
+    user_identifier: str | None = None,
+    access_role: str | None = None,
 ) -> None:
     """Render the application and execute work only after user input."""
 
     _initialize_state()
     st.html(theme_css(st.context.theme.type))
-    st.logo(str(BRAND_WORDMARK), size="large", icon_image=str(BRAND_MARK))
-    selected_model = _render_sidebar(models, configuration_error)
-    sidebar_sources = st.sidebar.empty()
-
-    def refresh_sidebar_sources() -> None:
-        with sidebar_sources.container():
-            _render_sidebar_sources(_latest_assistant_message())
+    st.logo(str(BRAND_MARK), size="small", icon_image=str(BRAND_MARK))
+    selected_model, refresh_sidebar_sources = _render_sidebar(
+        models,
+        configuration_error,
+        user_identifier=user_identifier,
+        access_role=access_role,
+    )
 
     refresh_sidebar_sources()
     _render_brand_title()
@@ -126,9 +128,15 @@ def _latest_assistant_message() -> UiMessage | None:
     )
 
 
-def _render_sidebar(models: tuple[str, ...], configuration_error: str | None) -> str:
-    with st.sidebar:
-        st.caption("Sof~IA · KNOWLEDGE WORKSPACE")
+def _render_sidebar(
+    models: tuple[str, ...],
+    configuration_error: str | None,
+    *,
+    user_identifier: str | None,
+    access_role: str | None,
+) -> tuple[str, Callable[[], None]]:
+    with st.sidebar, st.container(height="stretch", gap="small"):
+        _render_sidebar_identity(user_identifier, access_role)
         st.header("Answer settings")
         selected_model = st.selectbox(
             "Cortex model",
@@ -149,7 +157,35 @@ def _render_sidebar(models: tuple[str, ...], configuration_error: str | None) ->
         ):
             st.session_state.messages = []
             st.rerun()
-    return selected_model
+
+        sidebar_sources = st.empty()
+        st.space("stretch")
+        st.divider()
+        with st.container(horizontal_alignment="center"):
+            st.image(
+                str(BRAND_WORDMARK),
+                alt="Sofinco wordmark",
+                width=180,
+            )
+
+    def refresh_sidebar_sources() -> None:
+        with sidebar_sources.container():
+            _render_sidebar_sources(_latest_assistant_message())
+
+    return selected_model, refresh_sidebar_sources
+
+
+def _render_sidebar_identity(user_identifier: str | None, access_role: str | None) -> None:
+    st.caption("Signed in as")
+    st.markdown(
+        f":material/account_circle: **{_escape_markdown(user_identifier or 'Unavailable')}**"
+    )
+    st.caption("Access role")
+    role_label = access_role or (
+        "Default Snowflake role" if user_identifier else "Role unavailable"
+    )
+    st.badge(role_label, color="gray", icon=":material/admin_panel_settings:")
+    st.divider()
 
 
 def _render_sidebar_sources(message: UiMessage | None) -> None:

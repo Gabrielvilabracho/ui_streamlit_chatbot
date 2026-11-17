@@ -41,6 +41,8 @@ st.set_page_config(
 
 configuration_error: str | None = None
 orchestrator_factory: OrchestratorFactory | None = None
+user_identifier: str | None = None
+access_role: str | None = None
 try:
     snowflake_settings = SnowflakeSettings.from_sources(
         secrets=_secret_values(),
@@ -50,6 +52,8 @@ except ConfigurationError as error:
     configuration_error = str(error)
 else:
     orchestrator_factory = partial(_cached_orchestrator, snowflake_settings)
+    user_identifier = snowflake_settings.user
+    access_role = snowflake_settings.role
 
 configured_models = tuple(
     model.strip()
@@ -61,4 +65,6 @@ run_app(
     orchestrator_factory=orchestrator_factory,
     models=configured_models or DEFAULT_MODELS,
     configuration_error=configuration_error,
+    user_identifier=user_identifier,
+    access_role=access_role,
 )

@@ -62,6 +62,7 @@ linkColor = "#0A6067"
 codeTextColor = "#222222"
 codeBackgroundColor = "#FFFFFF"
 borderColor = "#566467"
+paddingTop = "0.5rem"
 
 [theme.dark]
 primaryColor = "#17ABB5"
@@ -88,3 +89,4 @@ linkColor = "#CFEFF0"
 codeTextColor = "#EAF5F7"
 codeBackgroundColor = "#333333"
 borderColor = "#EAF5F7"
+paddingTop = "0.5rem"

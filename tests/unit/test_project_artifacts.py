@@ -70,6 +70,12 @@ def test_sofinco_brand_assets_are_wired_into_the_app_shell() -> None:
         assert mark.getpixel((0, 0))[3] == 0
     with Image.open(wordmark_path).convert("RGBA") as wordmark:
         assert wordmark.width > wordmark.height * 3
+        alpha_bounds = wordmark.getchannel("A").getbbox()
+        assert alpha_bounds is not None
+        left, _top, right, bottom = alpha_bounds
+        assert left >= 32
+        assert wordmark.width - right >= 32
+        assert wordmark.height - bottom >= 48
         colors = {
             color
             for _count, color in (
@@ -87,10 +93,13 @@ def test_sofinco_brand_assets_are_wired_into_the_app_shell() -> None:
 
     assert 'page_icon=str(BRAND_MARK)' in entrypoint
     assert (
-        'st.logo(str(BRAND_WORDMARK), size="large", icon_image=str(BRAND_MARK))'
+        'st.logo(str(BRAND_MARK), size="small", icon_image=str(BRAND_MARK))'
         in streamlit_app
     )
     assert 'BRAND_WORDMARK = BRAND_ASSET_DIR / "sofinco_logo.png"' in streamlit_app
+    assert 'alt="Sofinco wordmark"' in streamlit_app
+    assert 'width=180' in streamlit_app
+    assert 'st.space("stretch")' in streamlit_app
     assert 'with st.container(horizontal=True, vertical_alignment="center")' in streamlit_app
     assert 'alt="Sofinco mark"' in streamlit_app
     assert 'width=64' in streamlit_app
@@ -137,6 +146,7 @@ def test_streamlit_theme_exposes_complete_native_light_and_dark_modes() -> None:
     assert "[theme.dark.sidebar]" in theme
     assert 'backgroundColor = "#F3F0EA"' in theme
     assert 'backgroundColor = "#222222"' in theme
+    assert theme.count('paddingTop = "0.5rem"') == 2
 
 
 def test_streamlit_theme_uses_requested_semantic_palette_and_local_fonts() -> None:

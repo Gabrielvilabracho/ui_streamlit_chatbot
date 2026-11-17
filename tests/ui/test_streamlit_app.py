@@ -12,8 +12,9 @@ def test_root_app_renders_onboarding_and_safe_configuration_error() -> None:
 
     assert not app.exception
     assert app.title[0].value == "Ask Sof~IA"
-    assert len(app.get("image")) == 1
+    assert len(app.get("image")) == 2
     assert app.get("image")[0].proto.imgs[0].alt == "Sofinco mark"
+    assert app.sidebar.get("image")[0].proto.imgs[0].alt == "Sofinco wordmark"
     assert app.selectbox(key="model_selector").value
     assert "Snowflake configuration" in app.error[0].value
     assert app.chat_input[0].disabled is True
@@ -54,6 +55,8 @@ def test_fake_chat_flow_renders_checklist_sources_controls_and_metrics() -> None
             orchestrator_factory=FakeOrchestrator,
             models=("test-model",),
             configuration_error=None,
+            user_identifier="rag_user",
+            access_role="RAG_APP_ROLE",
         )
 
     app = AppTest.from_function(fake_app, default_timeout=10).run()
@@ -63,6 +66,9 @@ def test_fake_chat_flow_renders_checklist_sources_controls_and_metrics() -> None
     assert any(item.value == "Grounded answer [1]." for item in app.markdown)
     assert any("Source title" in item.value for item in app.markdown)
     assert any("Source title" in item.value for item in app.sidebar.markdown)
+    assert any("rag\\_user" in item.value for item in app.sidebar.markdown)
+    assert any("RAG_APP_ROLE" in item.value for item in app.sidebar.markdown)
+    assert app.sidebar.get("image")[0].proto.imgs[0].alt == "Sofinco wordmark"
     assert len(app.checkbox) == 5
     assert all(item.value is True and item.disabled for item in app.checkbox)
     assert len(app.feedback) == 1
