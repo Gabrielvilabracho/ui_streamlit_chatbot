@@ -40,7 +40,7 @@ def run_app(
     _initialize_state()
     st.html(theme_css())
     selected_model = _render_sidebar(models, configuration_error)
-    st.title("Ask CONTAVIA")
+    st.title("Ask Sof~IA")
     st.caption("Grounded answers from approved Snowflake knowledge")
     st.html(onboarding_html())
 
@@ -97,7 +97,7 @@ def _messages() -> tuple[UiMessage, ...]:
 
 def _render_sidebar(models: tuple[str, ...], configuration_error: str | None) -> str:
     with st.sidebar:
-        st.caption("CONTAVIA · KNOWLEDGE WORKSPACE")
+        st.caption("Sof~IA · KNOWLEDGE WORKSPACE")
         st.header("Answer settings")
         selected_model = st.selectbox(
             "Cortex model",

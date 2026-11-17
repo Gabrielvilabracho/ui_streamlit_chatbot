@@ -29,7 +29,30 @@ def test_snowflake_bootstrap_uses_cortex_search_ai_complete_and_least_privilege(
     assert "CHANGE_TRACKING = TRUE" in bootstrap
     assert "SNOWFLAKE.CORTEX_USER" in bootstrap
     assert "GRANT USAGE ON CORTEX SEARCH SERVICE" in bootstrap
-    assert "CONTAVIA_RAG_APP" in bootstrap
+    assert "SOFIA_RAG_APP" in bootstrap
+
+
+def test_operational_artifacts_use_the_sofia_brand_and_identifiers() -> None:
+    operational_paths = (
+        "README.md",
+        "app.py",
+        "config/environment-variables.example.txt",
+        "config/snowflake-settings.example.toml",
+        "docs/architecture.md",
+        "docs/operations.md",
+        "pyproject.toml",
+        "sql/bootstrap.sql",
+        "src/rag_chat/__init__.py",
+        "src/rag_chat/domain/prompts.py",
+        "src/rag_chat/ui/markup.py",
+        "src/rag_chat/ui/streamlit_app.py",
+    )
+    content = "\n".join(read(path) for path in operational_paths)
+
+    assert "CONTAVIA" not in content.upper()
+    assert "Sof~IA" in content
+    assert "SOFIA_RAG_APP" in content
+    assert 'name = "sofia-cortex-rag"' in content
 
 
 def test_configuration_examples_name_every_required_setting_without_real_secrets() -> None:

@@ -2,10 +2,12 @@
 
 Use this runbook to configure, observe, and troubleshoot the application without exposing credentials or prompt content.
 
+> The bootstrap now targets the `SOFIA` database, roles, and warehouse. It does not rename or remove objects created with earlier identifiers; existing deployments require an explicit migration plan before rollout.
+
 ## Deployment checklist
 
 - [ ] Run `sql/bootstrap.sql` with reviewed object names and role assignments.
-- [ ] Load approved document chunks into `CONTAVIA.KNOWLEDGE.DOCUMENT_CHUNKS`.
+- [ ] Load approved document chunks into `SOFIA.KNOWLEDGE.DOCUMENT_CHUNKS`.
 - [ ] Verify the Cortex Search Service is active and current.
 - [ ] Store credentials in Streamlit secrets or the deployment secret manager.
 - [ ] Set `RAG_MODELS` to models available in the target Snowflake account.

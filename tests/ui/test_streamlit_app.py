@@ -11,7 +11,7 @@ def test_root_app_renders_onboarding_and_safe_configuration_error() -> None:
     app = AppTest.from_file(PROJECT_ROOT / "app.py", default_timeout=10).run()
 
     assert not app.exception
-    assert app.title[0].value == "Ask CONTAVIA"
+    assert app.title[0].value == "Ask Sof~IA"
     assert app.selectbox(key="model_selector").value
     assert "Snowflake configuration" in app.error[0].value
     assert app.chat_input[0].disabled is True
