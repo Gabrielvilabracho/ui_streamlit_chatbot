@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import cast
+from typing import Literal, cast
 from urllib.parse import urlparse
 from uuid import uuid4
 
@@ -40,6 +40,13 @@ def run_app(
     _initialize_state()
     st.html(theme_css(st.context.theme.type))
     selected_model = _render_sidebar(models, configuration_error)
+    sidebar_sources = st.sidebar.empty()
+
+    def refresh_sidebar_sources() -> None:
+        with sidebar_sources.container():
+            _render_sidebar_sources(_latest_assistant_message())
+
+    refresh_sidebar_sources()
     st.title("Ask Sof~IA")
     st.caption("Grounded answers from approved Snowflake knowledge")
     st.html(onboarding_html())
@@ -71,6 +78,7 @@ def run_app(
             model=selected_model,
             history=history,
             orchestrator_factory=orchestrator_factory,
+            refresh_sidebar_sources=refresh_sidebar_sources,
         )
     elif retry_request and orchestrator_factory:
         history = conversation_history(
@@ -82,6 +90,7 @@ def run_app(
             history=history,
             orchestrator_factory=orchestrator_factory,
             replace_message_id=retry_request.message_id,
+            refresh_sidebar_sources=refresh_sidebar_sources,
         )
         st.rerun()
 
@@ -93,6 +102,13 @@ def _initialize_state() -> None:
 
 def _messages() -> tuple[UiMessage, ...]:
     return tuple(cast(list[UiMessage], st.session_state.messages))
+
+
+def _latest_assistant_message() -> UiMessage | None:
+    return next(
+        (message for message in reversed(_messages()) if message.role == "assistant"),
+        None,
+    )
 
 
 def _render_sidebar(models: tuple[str, ...], configuration_error: str | None) -> str:
@@ -121,6 +137,26 @@ def _render_sidebar(models: tuple[str, ...], configuration_error: str | None) ->
     return selected_model
 
 
+def _render_sidebar_sources(message: UiMessage | None) -> None:
+    st.divider()
+    st.subheader("Sources consulted")
+    if message is None or not message.sources:
+        st.caption("Sources from the latest answer will appear here.")
+        return
+
+    with st.expander(
+        f"Latest answer · {len(message.sources)}",
+        icon=":material/library_books:",
+    ):
+        _render_source_items(
+            message,
+            preview_length=140,
+            link_label="Open document",
+            key_prefix="sidebar_source",
+            link_width="stretch",
+        )
+
+
 def _render_history() -> UiMessage | None:
     retry_request: UiMessage | None = None
     for message in _messages():
@@ -139,6 +175,7 @@ def _generate_answer(
     model: str,
     history: tuple[ChatMessage, ...],
     orchestrator_factory: OrchestratorFactory,
+    refresh_sidebar_sources: Callable[[], None],
     replace_message_id: str | None = None,
 ) -> None:
     request_id = replace_message_id or _message_id("assistant")
@@ -200,9 +237,11 @@ def _generate_answer(
         messages = _messages()
         if replace_message_id:
             st.session_state.messages = list(replace_message(messages, message))
+            refresh_sidebar_sources()
             return
 
         st.session_state.messages = [*messages, message]
+        refresh_sidebar_sources()
         st.markdown(answer.content)
         _render_sources(message)
         _render_controls(message)
@@ -215,16 +254,36 @@ def _render_sources(message: UiMessage) -> None:
         f"Sources · {len(message.sources)}",
         icon=":material/library_books:",
     ):
-        for index, source in enumerate(message.sources, start=1):
-            st.markdown(f"**[{index}] {_escape_markdown(source.title)}**")
-            st.caption(source.content[:280])
-            if source.uri and _is_safe_link(source.uri):
-                st.link_button(
-                    "Open source",
-                    source.uri,
-                    icon=":material/open_in_new:",
-                    width="content",
-                )
+        _render_source_items(
+            message,
+            preview_length=280,
+            link_label="Open source",
+            key_prefix="message_source",
+            link_width="content",
+        )
+
+
+def _render_source_items(
+    message: UiMessage,
+    *,
+    preview_length: int,
+    link_label: str,
+    key_prefix: str,
+    link_width: Literal["content", "stretch"],
+) -> None:
+    for index, source in enumerate(message.sources, start=1):
+        st.markdown(f"**[{index}] {_escape_markdown(source.title)}**")
+        st.caption(source.content[:preview_length])
+        if source.uri and _is_safe_link(source.uri):
+            st.link_button(
+                link_label,
+                source.uri,
+                key=f"{key_prefix}_{message.message_id}_{source.document_id}_{index}",
+                icon=":material/open_in_new:",
+                width=link_width,
+            )
+        if index < len(message.sources):
+            st.divider()
 
 
 def _render_controls(message: UiMessage) -> bool:
