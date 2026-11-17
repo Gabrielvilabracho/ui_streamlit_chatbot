@@ -221,6 +221,28 @@ select:focus-visible {
   color: var(--on-brand-text);
 }
 
+.sofia-copy-button[data-state="loading"] {
+  cursor: wait;
+}
+
+.sofia-copy-button[data-state="success"] {
+  border-color: var(--state-success-surface);
+  background: var(--state-success-surface);
+  color: var(--on-state-text);
+}
+
+.sofia-copy-button[data-state="warning"] {
+  border-color: var(--state-warning-surface);
+  background: var(--state-warning-surface);
+  color: var(--on-state-text);
+}
+
+.sofia-copy-button[data-state="error"] {
+  border-color: var(--state-error-surface);
+  background: var(--state-error-surface);
+  color: var(--on-state-text);
+}
+
 .sofia-metrics {
   display: flex;
   flex-wrap: wrap;
@@ -287,9 +309,25 @@ def copy_button_html(message_id: str, content: str) -> str:
   button.addEventListener("click", async () => {{
     const bytes = Uint8Array.from(atob("{encoded_content}"), character => character.charCodeAt(0));
     const text = new TextDecoder().decode(bytes);
-    await navigator.clipboard.writeText(text);
-    button.textContent = "Copied";
-    window.setTimeout(() => {{ button.textContent = "Copy"; }}, 1400);
+    button.disabled = true;
+    button.dataset.state = "loading";
+    button.setAttribute("aria-busy", "true");
+    button.textContent = "Copying…";
+    try {{
+      await navigator.clipboard.writeText(text);
+      button.dataset.state = "success";
+      button.textContent = "Copied";
+    }} catch {{
+      button.dataset.state = "error";
+      button.textContent = "Copy failed";
+    }} finally {{
+      button.removeAttribute("aria-busy");
+      window.setTimeout(() => {{
+        button.disabled = false;
+        button.dataset.state = "idle";
+        button.textContent = "Copy";
+      }}, 1400);
+    }}
   }});
 }})();
 </script>
