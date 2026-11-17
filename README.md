@@ -15,6 +15,8 @@ uv run streamlit run app.py
 
 Open the local URL shown by Streamlit. The input remains disabled until every required Snowflake setting is present.
 
+Use **Settings → Theme** in the Streamlit toolbar to switch between the branded Light and Dark appearances.
+
 > Never commit `.streamlit/secrets.toml` or `.env`. Both are ignored by Git.
 
 ## What the app does
