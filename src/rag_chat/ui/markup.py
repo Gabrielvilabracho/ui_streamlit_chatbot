@@ -7,100 +7,255 @@ import hashlib
 import html
 
 
-def theme_css() -> str:
-    """Return the explicitly requested Sof~IA semantic token layer."""
+def theme_css(theme_type: str | None = "light") -> str:
+    """Return Sof~IA tokens with theme-safe custom element styling."""
 
-    return """
-<style>
-:root {
-  --sofia-primary: #17ABB5;
-  --sofia-accent: #1AAEB7;
-  --sofia-primary-soft: #CFEFF0;
-  --sofia-accent-surface: #EAF5F7;
-  --sofia-ink: #222222;
-  --sofia-neutral: #F2F2F2;
-  --sofia-base: #FFFFFF;
-  --sofia-cloud: #DDD8CC;
-  --sofia-ivory: #E8E8DE;
-  --sofia-wave: #F3F0EA;
-  --sofia-fog: #F4F4F4;
-  --sofia-font: "Helvetica Neue", "Suisse International", "Neue Montreal", Arial, sans-serif;
+    shared_tokens = """
+  --brand-primary: #17ABB5;
+  --brand-accent: #1AAEB7;
+  --brand-soft: #CFEFF0;
+  --brand-surface: #EAF5F7;
+  --on-brand-text: #222222;
+  --brand-muted-text: #566467;
+  --brand-accent-text: #0A6067;
+  --brand-control-border: #566467;
+  --on-state-text: #FFFFFF;
+  --state-error-surface: #B42318;
+  --state-success-surface: #166534;
+  --state-warning-surface: #8A4B08;
+  --font-display: "Manrope", "Helvetica Neue", Arial, sans-serif;
+  --font-interface: "Helvetica Neue", "Suisse International", "Neue Montreal", Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", Consolas, monospace;
+  --size-display: clamp(2.75rem, 6vw, 5rem);
+  --size-h1: clamp(2.25rem, 4vw, 3.5rem);
+  --size-h2: clamp(1.75rem, 3vw, 2.5rem);
+  --size-h3: 1.375rem;
+  --size-body: 1rem;
+  --size-small: 0.875rem;
+  --size-label: 0.75rem;
+""".strip()
+
+    if theme_type == "dark":
+        theme_tokens = """
+  --page: #222222;
+  --surface: #2B2B2B;
+  --surface-neutral: #333333;
+  --text-primary: #FFFFFF;
+  --text-secondary: #EAF5F7;
+  --text-accent: #CFEFF0;
+  --border: #4B4F55;
+  --information-surface: #2B2B2B;
+  --badge-surface: #333333;
+  --control-surface: #2B2B2B;
+  --control-border: #EAF5F7;
+  --control-hover: #333333;
+  --control-active: #4B4F55;
+  --focus-ring: #17ABB5;
+  --state-error: #FFB4AB;
+  --state-success: #A7F3D0;
+  --state-warning: #FDE68A;
+""".strip()
+    else:
+        theme_tokens = """
+  --page: #F3F0EA;
+  --surface: #FFFFFF;
+  --surface-neutral: #F2F2F2;
+  --text-primary: #222222;
+  --text-secondary: #566467;
+  --text-accent: #0A6067;
+  --border: #D7D2C8;
+  --information-surface: #EAF5F7;
+  --badge-surface: #CFEFF0;
+  --control-surface: #FFFFFF;
+  --control-border: #566467;
+  --control-hover: #F2F2F2;
+  --control-active: #CFEFF0;
+  --focus-ring: #0A6067;
+  --state-error: #B42318;
+  --state-success: #166534;
+  --state-warning: #8A4B08;
+""".strip()
+
+    styles = """
+html, body, button, input, textarea, select {
+  font-family: var(--font-interface);
 }
 
-html, body, button, input, textarea, select {
-  font-family: var(--sofia-font);
+body {
+  font-size: var(--size-body);
+  line-height: 1.6;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+  color: inherit;
+  text-wrap: balance;
+}
+
+h1 {
+  font-size: var(--size-h1);
+  font-weight: 500;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+}
+
+h1:first-of-type {
+  font-size: var(--size-display);
+}
+
+h2 {
+  font-size: var(--size-h2);
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+}
+
+h3 {
+  font-size: var(--size-h3);
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+}
+
+p {
+  max-width: 70ch;
+  color: inherit;
+  font-size: var(--size-body);
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+
+small {
+  font-size: var(--size-small);
+}
+
+label, code, pre, kbd, samp {
+  font-family: var(--font-mono);
+}
+
+label {
+  font-size: var(--size-label);
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+button, input, textarea, select {
+  min-height: 2.75rem;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 3px solid currentColor;
+  outline-offset: 3px;
 }
 
 .sofia-onboarding {
-  position: relative;
-  overflow: hidden;
   margin: 0.5rem 0 2rem;
   padding: clamp(1.25rem, 3vw, 2.25rem);
-  border: 1px solid var(--sofia-primary-soft);
-  border-radius: 1.25rem;
-  background:
-    radial-gradient(circle at 92% 0%, rgba(23, 171, 181, 0.18), transparent 34%),
-    linear-gradient(135deg, var(--sofia-base), var(--sofia-accent-surface));
-  color: var(--sofia-ink);
+  border: 1px solid var(--brand-control-border);
+  border-left: 0.25rem solid var(--brand-primary);
+  border-radius: 0.75rem;
+  background: var(--brand-surface);
+  color: var(--on-brand-text);
 }
 
 .sofia-onboarding__eyebrow {
   margin: 0 0 0.75rem;
-  color: #0B747B;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.16em;
+  color: var(--brand-accent-text);
+  font: 500 var(--size-label)/1.4 var(--font-mono);
+  letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
 .sofia-onboarding__copy {
-  max-width: 62ch;
+  max-width: 70ch;
   margin: 0;
-  color: #35575A;
-  line-height: 1.65;
+  color: var(--brand-muted-text);
+  font: 400 var(--size-body)/1.6 var(--font-interface);
 }
 
 .sofia-copy-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 2.25rem;
-  padding: 0.35rem 0.8rem;
-  border: 1px solid var(--sofia-primary-soft);
-  border-radius: 999px;
-  background: var(--sofia-base);
-  color: var(--sofia-ink);
-  font: 600 0.78rem/1 var(--sofia-font);
+  min-height: 2.75rem;
+  padding: 0.625rem 1rem;
+  border: 1px solid currentColor;
+  border-radius: 0.75rem;
+  background: transparent;
+  color: inherit;
+  font: 600 var(--size-small)/1.25 var(--font-interface);
   cursor: pointer;
 }
 
-.sofia-copy-button:hover,
+.sofia-copy-button:hover {
+  border-color: var(--brand-primary);
+  background: var(--brand-soft);
+  color: var(--on-brand-text);
+}
+
+.sofia-copy-button:active {
+  background: var(--brand-surface);
+  color: var(--on-brand-text);
+}
+
 .sofia-copy-button:focus-visible {
-  border-color: var(--sofia-primary);
-  color: #0B747B;
-  outline: none;
+  border-color: var(--brand-primary);
+  outline: 3px solid currentColor;
+  outline-offset: 3px;
+}
+
+.sofia-copy-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.sofia-copy-button[aria-pressed="true"] {
+  border-color: var(--brand-primary);
+  background: var(--brand-soft);
+  color: var(--on-brand-text);
 }
 
 .sofia-metrics {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 0.35rem;
-  min-height: 2.25rem;
+  gap: 0.5rem;
+  min-height: 2.75rem;
   align-items: center;
 }
 
 .sofia-metrics__item {
-  padding: 0.35rem 0.55rem;
-  border: 1px solid var(--sofia-primary-soft);
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--brand-control-border);
   border-radius: 999px;
-  background: var(--sofia-accent-surface);
-  color: #35575A;
-  font: 600 0.68rem/1 var(--sofia-font);
+  background: var(--brand-soft);
+  color: var(--on-brand-text);
+  font: 500 var(--size-label)/1.4 var(--font-mono);
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-</style>
+
+@media (max-width: 40rem) {
+  .sofia-onboarding {
+    margin-bottom: 1.5rem;
+    padding: 1.25rem;
+  }
+
+  .sofia-metrics {
+    justify-content: flex-start;
+  }
+}
 """.strip()
+    return (
+        f"<style>\n:root {{\n{shared_tokens}\n{theme_tokens}\n}}"
+        f"\n\n{styles}\n</style>"
+    )
 
 
 def onboarding_html() -> str:
