@@ -84,3 +84,54 @@ def test_operations_runbook_documents_timeout_feedback_and_safe_telemetry() -> N
     assert "feedback" in runbook.lower()
     assert "prompt content" in runbook.lower()
     assert "credentials" in runbook.lower()
+
+
+def test_streamlit_theme_exposes_complete_native_light_and_dark_modes() -> None:
+    theme = read(".streamlit/config.toml")
+
+    assert "[theme.light]" in theme
+    assert "[theme.dark]" in theme
+    assert "[theme.light.sidebar]" in theme
+    assert "[theme.dark.sidebar]" in theme
+    assert 'backgroundColor = "#F3F0EA"' in theme
+    assert 'backgroundColor = "#222222"' in theme
+
+
+def test_streamlit_theme_uses_requested_semantic_palette_and_local_fonts() -> None:
+    theme = read(".streamlit/config.toml")
+
+    for expected in (
+        'backgroundColor = "#F3F0EA"',
+        'secondaryBackgroundColor = "#F2F2F2"',
+        'textColor = "#222222"',
+        'linkColor = "#0A6067"',
+        'borderColor = "#566467"',
+        'backgroundColor = "#222222"',
+        'secondaryBackgroundColor = "#2B2B2B"',
+        'textColor = "#FFFFFF"',
+        'linkColor = "#CFEFF0"',
+        'borderColor = "#EAF5F7"',
+        'font = "Helvetica Neue, Suisse International, Neue Montreal, Manrope, sans-serif"',
+        'headingFont = "Manrope, Helvetica Neue, sans-serif"',
+        'codeFont = "IBM Plex Mono, monospace"',
+        "[[theme.fontFaces]]",
+        "enableStaticServing = true",
+        'redColor = "#B42318"',
+        'orangeColor = "#8A4B08"',
+        'greenColor = "#166534"',
+    ):
+        assert expected in theme
+
+    for relative_path in (
+        "static/fonts/Manrope-Variable.ttf",
+        "static/fonts/IBMPlexMono-Regular.ttf",
+        "static/fonts/IBMPlexMono-Medium.ttf",
+        "static/fonts/OFL-Manrope.txt",
+        "static/fonts/OFL-IBMPlexMono.txt",
+        "static/fonts/PROVENANCE.md",
+    ):
+        assert (PROJECT_ROOT / relative_path).is_file()
+
+    provenance = read("static/fonts/PROVENANCE.md")
+    assert "https://github.com/googlefonts/manrope" in provenance
+    assert "https://github.com/IBM/plex" in provenance

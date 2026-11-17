@@ -65,6 +65,8 @@ New adapters should translate provider exceptions into domain-safe errors at the
 
 `.streamlit/config.toml` carries native Streamlit theme tokens. `src/rag_chat/ui/markup.py` adds only the requested Sof~IA-specific typography, onboarding, copy control, and passive metric badges.
 
+Complete `[theme.light]` and `[theme.dark]` sections keep Streamlit's native appearance selector available in **Settings → Theme**. Custom markup reads `st.context.theme.type` and selects matching semantic tokens without private Streamlit selectors or theme-changing JavaScript.
+
 Semantic values retain the approved Sof~IA palette reference:
 
 | Role | Value |

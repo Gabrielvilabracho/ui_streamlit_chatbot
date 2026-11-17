@@ -1,25 +1,90 @@
+[server]
+enableStaticServing = true
+
+[[theme.fontFaces]]
+family = "Manrope"
+url = "app/static/fonts/Manrope-Variable.ttf"
+weight = "200 800"
+style = "normal"
+
+[[theme.fontFaces]]
+family = "IBM Plex Mono"
+url = "app/static/fonts/IBMPlexMono-Regular.ttf"
+weight = "400"
+style = "normal"
+
+[[theme.fontFaces]]
+family = "IBM Plex Mono"
+url = "app/static/fonts/IBMPlexMono-Medium.ttf"
+weight = "500"
+style = "normal"
+
 [theme]
-base = "light"
-primaryColor = "#17ABB5"
-backgroundColor = "#FFFFFF"
-secondaryBackgroundColor = "#EAF5F7"
-textColor = "#222222"
-linkColor = "#0B747B"
-borderColor = "#CFEFF0"
-font = "sans-serif"
-headingFont = "sans-serif"
+font = "Helvetica Neue, Suisse International, Neue Montreal, Manrope, sans-serif"
+headingFont = "Manrope, Helvetica Neue, sans-serif"
+codeFont = "IBM Plex Mono, monospace"
 baseFontSize = 16
+baseFontWeight = 400
+codeFontSize = "0.875rem"
+codeFontWeight = 400
+headingFontWeights = [500, 500, 600, 600, 600, 600]
+metricValueFontSize = "2.25rem"
+metricValueFontWeight = 500
 baseRadius = "0.75rem"
-buttonRadius = "full"
+buttonRadius = "0.75rem"
 showWidgetBorder = true
 showSidebarBorder = true
-paddingTop = "2rem"
+paddingTop = "2.5rem"
 paddingBottom = "3rem"
 
-[theme.sidebar]
+[theme.light]
+primaryColor = "#17ABB5"
+backgroundColor = "#F3F0EA"
+secondaryBackgroundColor = "#F2F2F2"
+textColor = "#222222"
+linkColor = "#0A6067"
+codeTextColor = "#222222"
+codeBackgroundColor = "#FFFFFF"
+borderColor = "#566467"
+redColor = "#B42318"
+orangeColor = "#8A4B08"
+greenColor = "#166534"
+dataframeBorderColor = "#D7D2C8"
+dataframeHeaderBackgroundColor = "#F2F2F2"
+dataframeHeaderTextColor = "#222222"
+
+[theme.light.sidebar]
 primaryColor = "#17ABB5"
 backgroundColor = "#F2F2F2"
 secondaryBackgroundColor = "#FFFFFF"
 textColor = "#222222"
-linkColor = "#0B747B"
-borderColor = "#CFEFF0"
+linkColor = "#0A6067"
+codeTextColor = "#222222"
+codeBackgroundColor = "#FFFFFF"
+borderColor = "#566467"
+
+[theme.dark]
+primaryColor = "#17ABB5"
+backgroundColor = "#222222"
+secondaryBackgroundColor = "#2B2B2B"
+textColor = "#FFFFFF"
+linkColor = "#CFEFF0"
+codeTextColor = "#EAF5F7"
+codeBackgroundColor = "#2B2B2B"
+borderColor = "#EAF5F7"
+redColor = "#FFB4AB"
+orangeColor = "#FDE68A"
+greenColor = "#A7F3D0"
+dataframeBorderColor = "#4B4F55"
+dataframeHeaderBackgroundColor = "#2B2B2B"
+dataframeHeaderTextColor = "#FFFFFF"
+
+[theme.dark.sidebar]
+primaryColor = "#17ABB5"
+backgroundColor = "#2B2B2B"
+secondaryBackgroundColor = "#333333"
+textColor = "#FFFFFF"
+linkColor = "#CFEFF0"
+codeTextColor = "#EAF5F7"
+codeBackgroundColor = "#333333"
+borderColor = "#EAF5F7"
