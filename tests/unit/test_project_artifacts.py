@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from PIL import Image
+
 PROJECT_ROOT = Path(__file__).parents[2]
 
 
@@ -53,6 +55,46 @@ def test_operational_artifacts_use_the_sofia_brand_and_identifiers() -> None:
     assert "Sof~IA" in content
     assert "SOFIA_RAG_APP" in content
     assert 'name = "sofia-cortex-rag"' in content
+
+
+def test_sofinco_brand_assets_are_wired_into_the_app_shell() -> None:
+    mark_path = PROJECT_ROOT / "static/brand/sofinco-mark.png"
+    wordmark_path = PROJECT_ROOT / "static/brand/sofinco_logo.png"
+
+    assert mark_path.is_file()
+    assert wordmark_path.is_file()
+
+    with Image.open(mark_path).convert("RGBA") as mark:
+        assert 0.8 <= mark.width / mark.height <= 1.2
+        assert mark.getchannel("A").getextrema()[0] == 0
+        assert mark.getpixel((0, 0))[3] == 0
+    with Image.open(wordmark_path).convert("RGBA") as wordmark:
+        assert wordmark.width > wordmark.height * 3
+        colors = {
+            color
+            for _count, color in (
+                wordmark.getcolors(maxcolors=wordmark.width * wordmark.height) or ()
+            )
+        }
+        assert (24, 172, 185, 255) in colors
+        assert not any(
+            alpha > 0 and red >= 245 and green >= 245 and blue >= 245
+            for red, green, blue, alpha in colors
+        )
+
+    entrypoint = read("app.py")
+    streamlit_app = read("src/rag_chat/ui/streamlit_app.py")
+
+    assert 'page_icon=str(BRAND_MARK)' in entrypoint
+    assert (
+        'st.logo(str(BRAND_WORDMARK), size="large", icon_image=str(BRAND_MARK))'
+        in streamlit_app
+    )
+    assert 'BRAND_WORDMARK = BRAND_ASSET_DIR / "sofinco_logo.png"' in streamlit_app
+    assert 'with st.container(horizontal=True, vertical_alignment="center")' in streamlit_app
+    assert 'alt="Sofinco mark"' in streamlit_app
+    assert 'width=64' in streamlit_app
+    assert 'avatar=str(BRAND_MARK)' in streamlit_app
 
 
 def test_configuration_examples_name_every_required_setting_without_real_secrets() -> None:

@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 from collections.abc import Mapping
 from functools import partial
+from pathlib import Path
 from typing import Any
 
 import streamlit as st
@@ -16,6 +17,7 @@ from rag_chat.infrastructure.snowflake.settings import SnowflakeSettings
 from rag_chat.ui.streamlit_app import OrchestratorFactory, run_app
 
 DEFAULT_MODELS = ("llama3.3-70b", "mistral-large2", "snowflake-arctic")
+BRAND_MARK = Path(__file__).resolve().parent / "static" / "brand" / "sofinco-mark.png"
 
 
 @st.cache_resource(show_spinner=False)
@@ -32,7 +34,7 @@ def _secret_values() -> Mapping[str, Any]:
 
 st.set_page_config(
     page_title="Sof~IA Knowledge",
-    page_icon=":material/auto_awesome:",
+    page_icon=str(BRAND_MARK),
     layout="centered",
     initial_sidebar_state="expanded",
 )

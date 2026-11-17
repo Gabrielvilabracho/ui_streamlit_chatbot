@@ -12,6 +12,8 @@ def test_root_app_renders_onboarding_and_safe_configuration_error() -> None:
 
     assert not app.exception
     assert app.title[0].value == "Ask Sof~IA"
+    assert len(app.get("image")) == 1
+    assert app.get("image")[0].proto.imgs[0].alt == "Sofinco mark"
     assert app.selectbox(key="model_selector").value
     assert "Snowflake configuration" in app.error[0].value
     assert app.chat_input[0].disabled is True
