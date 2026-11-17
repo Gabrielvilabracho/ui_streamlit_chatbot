@@ -15,7 +15,7 @@ from rag_chat.application.ports import AnswerService
 from rag_chat.domain.models import (
     ChatMessage,
     GenerationResult,
-    OrchestrationStep,
+    ProgressEvent,
     RagAnswer,
     SourceDocument,
 )
@@ -85,7 +85,7 @@ class InstrumentedAnswerService:
         question: str,
         model: str,
         history: Sequence[ChatMessage] = (),
-        on_progress: Callable[[OrchestrationStep], None] | None = None,
+        on_progress: Callable[[ProgressEvent], None] | None = None,
     ) -> RagAnswer:
         return self._delegate.answer(
             question=question,
@@ -113,7 +113,7 @@ class RecordedAnswerService:
         question: str,
         model: str,
         history: Sequence[ChatMessage] = (),
-        on_progress: Callable[[OrchestrationStep], None] | None = None,
+        on_progress: Callable[[ProgressEvent], None] | None = None,
     ) -> RagAnswer:
         return cast(
             RagAnswer,
