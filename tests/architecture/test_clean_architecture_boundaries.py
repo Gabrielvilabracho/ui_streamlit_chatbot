@@ -18,7 +18,7 @@ def imported_roots(path: Path) -> set[str]:
     return roots
 
 
-def test_domain_and_application_do_not_import_ui_or_snowflake_frameworks() -> None:
+def test_domain_and_application_do_not_import_outer_frameworks() -> None:
     protected_files = [
         *sorted((SRC_ROOT / "domain").glob("*.py")),
         *sorted((SRC_ROOT / "application").glob("*.py")),
@@ -26,5 +26,5 @@ def test_domain_and_application_do_not_import_ui_or_snowflake_frameworks() -> No
 
     assert protected_files, "Expected domain and application modules to exist"
     for path in protected_files:
-        forbidden = imported_roots(path) & {"streamlit", "snowflake"}
+        forbidden = imported_roots(path) & {"streamlit", "snowflake", "trulens"}
         assert not forbidden, f"{path.relative_to(PROJECT_ROOT)} imports {sorted(forbidden)}"
