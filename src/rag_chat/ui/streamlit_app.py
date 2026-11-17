@@ -38,7 +38,7 @@ def run_app(
     """Render the application and execute work only after user input."""
 
     _initialize_state()
-    st.html(theme_css())
+    st.html(theme_css(st.context.theme.type))
     selected_model = _render_sidebar(models, configuration_error)
     st.title("Ask Sof~IA")
     st.caption("Grounded answers from approved Snowflake knowledge")
