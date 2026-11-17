@@ -28,6 +28,10 @@ def test_copy_button_encodes_untrusted_answer_text_before_javascript_insertion()
     assert "</script><script>alert" not in markup
     assert "navigator.clipboard.writeText" in markup
     assert "copy-answer-1" not in markup
+    assert 'button.setAttribute("aria-busy", "true")' in markup
+    assert 'button.dataset.state = "loading"' in markup
+    assert "Copying…" in markup
+    assert "Copy failed" in markup
 
 
 def test_metric_plugin_renders_passive_token_and_latency_values() -> None:
