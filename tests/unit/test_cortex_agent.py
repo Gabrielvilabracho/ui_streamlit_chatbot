@@ -5,8 +5,11 @@ from typing import Any
 
 import pytest
 
-from rag_chat.domain.errors import ConfigurationError
+from rag_chat.domain.errors import ConfigurationError, ProviderResponseError
+from rag_chat.domain.models import ChatMessage, ProgressState
 from rag_chat.infrastructure.snowflake.cortex_agent import (
+    AGENT_MODEL,
+    CortexAgentService,
     identify_viewer,
 )
 
@@ -73,3 +76,137 @@ def test_unknown_role_is_denied_without_agent_call(role: str) -> None:
     with pytest.raises(ConfigurationError, match="approved document policy"):
         identify_viewer(session)
     assert all("DATA_AGENT_RUN" not in sql for sql, _ in session.calls)
+
+
+def test_agent_preserves_history_citations_and_truthful_progress() -> None:
+    session = FakeSession()
+    service = CortexAgentService(session=session, viewer=identify_viewer(session))
+    events = []
+    history = (ChatMessage("user", "Earlier"), ChatMessage("assistant", "Earlier answer"))
+    answer = service.answer(
+        question="What's approved?", model=AGENT_MODEL, history=history, on_progress=events.append
+    )
+    query, params = session.calls[-1]
+    assert "SNOWFLAKE.CORTEX.DATA_AGENT_RUN(?, ?)" in query
+    assert params[0] == "DATALAB.SPAIN.SOFIA_GENERAL_AGENT"
+    request = json.loads(params[1])
+    assert request == {
+        "messages": [
+            {"role": "user", "content": [{"type": "text", "text": "Earlier"}]},
+            {"role": "assistant", "content": [{"type": "text", "text": "Earlier answer"}]},
+            {"role": "user", "content": [{"type": "text", "text": "What's approved?"}]},
+        ],
+        "stream": False,
+    }
+    assert answer.content == "Grounded answer [7]."
+    assert answer.sources[0].citation_label == "7"
+    assert answer.sources[0].content == "Approved evidence"
+    assert answer.model == AGENT_MODEL
+    assert not answer.usage_reported
+    assert answer.latency_ms >= 0
+    assert [event.state for event in events] == [ProgressState.STARTED, ProgressState.COMPLETED]
+    assert session.statement_params[-1] == {"STATEMENT_TIMEOUT_IN_SECONDS": "60"}
+
+
+def test_retry_does_not_duplicate_last_user_question() -> None:
+    session = FakeSession()
+    service = CortexAgentService(session=session, viewer=identify_viewer(session))
+    service.answer(
+        question="Question", model=AGENT_MODEL, history=(ChatMessage("user", "Question"),)
+    )
+    assert len(json.loads(session.calls[-1][1][1])["messages"]) == 1
+
+
+def test_identity_change_and_model_override_reject_before_agent_call() -> None:
+    session = FakeSession()
+    service = CortexAgentService(session=session, viewer=identify_viewer(session))
+    with pytest.raises(ConfigurationError, match="agent configuration"):
+        service.answer(question="Question", model="ignored-override")
+    session.role = "GG_APP_SOYOU_DATALAB_DPO"
+    with pytest.raises(ConfigurationError, match="changed"):
+        service.answer(question="Question", model=AGENT_MODEL)
+    assert all("DATA_AGENT_RUN" not in sql for sql, _ in session.calls)
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"role": "assistant", "content": []},
+        {"role": "assistant", "content": [{"type": "thinking", "text": "private"}]},
+        {
+            "role": "assistant",
+            "status": "timed_out",
+            "content": [{"type": "text", "text": "partial"}],
+        },
+        {
+            "role": "assistant",
+            "warnings": [{"message": "private tool failure"}],
+            "content": [{"type": "text", "text": "degraded"}],
+        },
+        {"role": "user", "content": [{"type": "text", "text": "wrong role"}]},
+    ],
+)
+def test_partial_or_malformed_agent_output_is_not_an_answer(payload: object) -> None:
+    session = FakeSession(payload)
+    service = CortexAgentService(session=session, viewer=identify_viewer(session))
+    with pytest.raises(ProviderResponseError):
+        service.answer(question="Question", model=AGENT_MODEL)
+
+
+def test_provider_failure_is_safe_and_does_not_retry() -> None:
+    session = FakeSession()
+    viewer = identify_viewer(session)
+
+    def fail(*args: object, **kwargs: object) -> None:
+        raise RuntimeError("secret prompt and account details")
+
+    session.sql = fail  # type: ignore[method-assign,assignment]
+    with pytest.raises(ProviderResponseError, match="caller connection") as error:
+        CortexAgentService(session=session, viewer=viewer).answer(question="Q", model=AGENT_MODEL)
+    assert "secret" not in str(error.value)
+
+
+def test_agent_counts_only_reported_aggregate_usage() -> None:
+    session = FakeSession(
+        {
+            "role": "assistant",
+            "content": [{"type": "text", "text": "Answer"}],
+            "metadata": {
+                "usage": {
+                    "tokens_consumed": [
+                        {"input_tokens": {"total": 20}, "output_tokens": {"total": 5}},
+                        {"input_tokens": {"total": 10}, "output_tokens": {"total": 3}},
+                    ]
+                }
+            },
+        }
+    )
+    answer = CortexAgentService(session=session, viewer=identify_viewer(session)).answer(
+        question="Question",
+        model=AGENT_MODEL,
+    )
+    assert answer.usage_reported
+    assert (answer.usage.prompt_tokens, answer.usage.completion_tokens) == (30, 8)
+
+
+def test_conflicting_citation_indices_do_not_relabel_evidence() -> None:
+    session = FakeSession(
+        {
+            "role": "assistant",
+            "content": [
+                {
+                    "type": "text",
+                    "text": "Answer [7]",
+                    "annotations": [
+                        {"type": "cortex_search_citation", "index": 7, "doc_id": "a"},
+                        {"type": "cortex_search_citation", "index": 7, "doc_id": "b"},
+                    ],
+                }
+            ],
+        }
+    )
+    with pytest.raises(ProviderResponseError, match="conflicting citations"):
+        CortexAgentService(session=session, viewer=identify_viewer(session)).answer(
+            question="Question",
+            model=AGENT_MODEL,
+        )
