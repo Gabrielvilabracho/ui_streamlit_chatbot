@@ -66,3 +66,18 @@ class OrchestrationStep(StrEnum):
     GENERATE_ANSWER = "Generate grounded answer"
     VALIDATE_OUTPUT = "Apply response guardrails"
     RECORD_TELEMETRY = "Record observability data"
+
+
+class ProgressState(StrEnum):
+    """Truthful lifecycle states emitted around real orchestration work."""
+
+    STARTED = "started"
+    COMPLETED = "completed"
+
+
+@dataclass(frozen=True, slots=True)
+class ProgressEvent:
+    """One observed transition for a concrete orchestration step."""
+
+    step: OrchestrationStep
+    state: ProgressState

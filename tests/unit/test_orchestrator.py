@@ -10,6 +10,8 @@ from rag_chat.domain.models import (
     ChatMessage,
     GenerationResult,
     OrchestrationStep,
+    ProgressEvent,
+    ProgressState,
     SourceDocument,
     TokenUsage,
 )
@@ -89,7 +91,7 @@ def test_orchestrator_returns_grounded_answer_and_reports_every_step() -> None:
     )
     guardrail = RecordingGuardrail()
     telemetry = RecordingTelemetry()
-    progress: list[OrchestrationStep] = []
+    progress: list[ProgressEvent] = []
     clock_values = iter((10.0, 10.245))
     orchestrator = RagOrchestrator(
         retriever=StubRetriever(documents),
@@ -113,11 +115,12 @@ def test_orchestrator_returns_grounded_answer_and_reports_every_step() -> None:
     assert answer.usage.total_tokens == 138
     assert answer.latency_ms == pytest.approx(245.0)
     assert progress == [
-        OrchestrationStep.VALIDATE_INPUT,
-        OrchestrationStep.RETRIEVE_CONTEXT,
-        OrchestrationStep.GENERATE_ANSWER,
-        OrchestrationStep.VALIDATE_OUTPUT,
-        OrchestrationStep.RECORD_TELEMETRY,
+        event
+        for step in OrchestrationStep
+        for event in (
+            ProgressEvent(step=step, state=ProgressState.STARTED),
+            ProgressEvent(step=step, state=ProgressState.COMPLETED),
+        )
     ]
     assert guardrail.calls == [
         ("input", "How do I close the books?"),
@@ -142,12 +145,18 @@ def test_orchestrator_translates_timeout_and_records_failure() -> None:
         clock=lambda: next(clock_values),
     )
 
+    progress: list[ProgressEvent] = []
     with pytest.raises(RagTimeoutError, match="timed out"):
         orchestrator.answer(
             question="How do I close the books?",
             model="llama3.3-70b",
+            on_progress=progress.append,
         )
 
     assert telemetry.failures == [
         ("How do I close the books?", "RagTimeoutError", 500.0)
     ]
+    assert progress[-1] == ProgressEvent(
+        step=OrchestrationStep.GENERATE_ANSWER,
+        state=ProgressState.STARTED,
+    )

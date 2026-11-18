@@ -15,6 +15,7 @@ from rag_chat.composition import build_orchestrator
 from rag_chat.domain.errors import ConfigurationError
 from rag_chat.infrastructure.snowflake.settings import SnowflakeSettings
 from rag_chat.infrastructure.trulens.settings import ObservabilitySettings
+from rag_chat.ui.model_status import parse_model_context_limits
 from rag_chat.ui.streamlit_app import OrchestratorFactory, run_app
 
 DEFAULT_MODELS = ("llama3.3-70b", "mistral-large2", "snowflake-arctic")
@@ -83,4 +84,7 @@ run_app(
     configuration_error=configuration_error,
     user_identifier=user_identifier,
     access_role=access_role,
+    model_context_limits=parse_model_context_limits(
+        os.getenv("RAG_MODEL_CONTEXT_LIMITS", "")
+    ),
 )

@@ -67,6 +67,16 @@ export RAG_MODELS="llama3.3-70b,mistral-large2"
 
 Model availability varies by Snowflake region and account. Keep only models enabled for the deployment.
 
+To show context utilization near the chat input, configure only context limits you have
+verified for the exact deployed model versions:
+
+```bash
+export RAG_MODEL_CONTEXT_LIMITS="llama3.3-70b=replace-with-verified-limit"
+```
+
+Use comma-separated `model=limit` entries for multiple models. Unknown limits remain labeled
+as unavailable; the application does not infer them.
+
 ## Verification
 
 ```bash
