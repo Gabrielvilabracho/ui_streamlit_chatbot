@@ -16,3 +16,11 @@ uri_column = "SOURCE_URL"
 enabled = false
 app_name = "SOFIA_RAG"
 app_version = "v1"
+
+[trulens_evaluation]
+dataset = "SOFIA.OBSERVABILITY.SOFIA_EVAL_QUESTIONS"
+run = "replace-with-unique-run-name"
+judge_model = "replace-with-enabled-cortex-model"
+input_column = "QUESTION"
+ground_truth_column = "EXPECTED_ANSWER"
+metrics = "groundedness,context_relevance,answer_relevance,coherence"

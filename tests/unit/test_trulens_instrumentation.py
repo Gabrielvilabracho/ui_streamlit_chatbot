@@ -13,6 +13,7 @@ from rag_chat.composition import with_observability
 from rag_chat.domain.models import GenerationResult, RagAnswer, SourceDocument, TokenUsage
 from rag_chat.infrastructure.trulens.instrumentation import (
     FailureIsolatedRecording,
+    create_trulens_runtime,
     create_trulens_service,
     generation_span_attributes,
     record_root_span_attributes,
@@ -218,6 +219,22 @@ def test_create_trulens_service_reuses_session_and_registers_named_app() -> None
     assert captured["app_version"] == "release-7"
     assert callable(captured["main_method"])
     assert recorder.calls == ["enter", "exit"]
+
+
+def test_create_trulens_runtime_exposes_registered_app_for_offline_runs() -> None:
+    recorder = FakeContext()
+
+    runtime = create_trulens_runtime(
+        delegate=FakeAnswerService(),
+        snowpark_session=object(),
+        settings=ObservabilitySettings(enabled=True),
+        connector_factory=lambda _: object(),
+        session_factory=lambda **_: object(),
+        recorder_factory=lambda *_args, **_kwargs: recorder,
+    )
+
+    assert runtime.tru_app is recorder
+    assert runtime.service.answer(question="Question", model="llama3.3-70b") == _answer()
 
 
 def test_disabled_observability_does_not_construct_trulens_service() -> None:

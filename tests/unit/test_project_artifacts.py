@@ -137,6 +137,21 @@ def test_operations_runbook_documents_timeout_feedback_and_safe_telemetry() -> N
     assert "credentials" in runbook.lower()
 
 
+def test_trulens_grants_are_phased_and_allow_named_dataset_reads() -> None:
+    grants = read("sql/trulens_observability_grants.sql")
+
+    assert "Phase 1: before External Agent registration" in grants
+    assert "Phase 2: after External Agent registration" in grants
+    assert "Phase 3: after the named evaluation table exists" in grants
+    assert (
+        "GRANT SELECT ON TABLE SOFIA.OBSERVABILITY.SOFIA_EVAL_QUESTIONS\n"
+        "    TO ROLE SOFIA_RAG_EVALUATOR;"
+    ) in grants
+    assert "GRANT READ UNREDACTED AI OBSERVABILITY EVENTS TABLE" not in "\n".join(
+        line for line in grants.splitlines() if not line.lstrip().startswith("--")
+    )
+
+
 def test_streamlit_theme_exposes_complete_native_light_and_dark_modes() -> None:
     theme = read(".streamlit/config.toml")
 

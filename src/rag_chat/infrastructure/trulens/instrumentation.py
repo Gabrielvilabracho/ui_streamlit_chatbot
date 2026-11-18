@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import sys
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 from types import TracebackType
 from typing import Any, Protocol, TypeVar, cast
 
@@ -128,6 +129,14 @@ class RecordedAnswerService:
         )
 
 
+@dataclass(frozen=True, slots=True)
+class TruLensRuntime:
+    """Keep the recording service and registered TruApp in one composition result."""
+
+    service: AnswerService
+    tru_app: Any
+
+
 def create_trulens_service(
     *,
     delegate: AnswerService,
@@ -138,6 +147,27 @@ def create_trulens_service(
     recorder_factory: Callable[..., RecordingContext] | None = None,
 ) -> AnswerService:
     """Register and return the existing app through TruApp using one session."""
+
+    return create_trulens_runtime(
+        delegate=delegate,
+        snowpark_session=snowpark_session,
+        settings=settings,
+        connector_factory=connector_factory,
+        session_factory=session_factory,
+        recorder_factory=recorder_factory,
+    ).service
+
+
+def create_trulens_runtime(
+    *,
+    delegate: AnswerService,
+    snowpark_session: Any,
+    settings: ObservabilitySettings,
+    connector_factory: Callable[[Any], object] = create_snowflake_connector,
+    session_factory: Callable[..., object] | None = None,
+    recorder_factory: Callable[..., RecordingContext] | None = None,
+) -> TruLensRuntime:
+    """Register the app and expose its recorder for explicit offline evaluation."""
 
     connector = connector_factory(snowpark_session)
     session_builder = session_factory or _create_tru_session
@@ -151,9 +181,12 @@ def create_trulens_service(
         session=tru_session,
         main_method=app.answer,
     )
-    return RecordedAnswerService(
-        app=app,
-        recording=FailureIsolatedRecording(recorder),
+    return TruLensRuntime(
+        service=RecordedAnswerService(
+            app=app,
+            recording=FailureIsolatedRecording(recorder),
+        ),
+        tru_app=recorder,
     )
 
 
