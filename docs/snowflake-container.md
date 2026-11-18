@@ -37,6 +37,8 @@ the application:
    named agent with only its corresponding Search service. Reuse the approved
    ingestion/embedding configuration; this repository does not establish it.
 3. Configure the model and grounding instructions on each agent, not in the app.
+   Use the [prepared Sof~IA agent instructions](sofia-agent-instructions.md) for the
+   planning/response fields and their pending native acceptance cases.
    Configure inaccessible-tool handling to reject incomplete tool access. The app
    also withholds any response containing warnings, incomplete status or errors.
 4. Audit ordinary privileges and caller grants with an administrator. Viewers need
