@@ -20,6 +20,28 @@ def test_root_app_renders_onboarding_and_safe_configuration_error() -> None:
     assert app.chat_input[0].disabled is True
 
 
+def test_invalid_optional_trulens_configuration_does_not_disable_chat(
+    monkeypatch,
+) -> None:
+    for name in (
+        "ACCOUNT",
+        "USER",
+        "PASSWORD",
+        "WAREHOUSE",
+        "DATABASE",
+        "SCHEMA",
+        "SEARCH_SERVICE",
+    ):
+        monkeypatch.setenv(f"SNOWFLAKE_{name}", "test")
+    monkeypatch.setenv("TRULENS_ENABLED", "malformed")
+
+    app = AppTest.from_file(PROJECT_ROOT / "app.py", default_timeout=10).run()
+
+    assert not app.exception
+    assert not app.error
+    assert app.chat_input[0].disabled is False
+
+
 def test_fake_chat_flow_renders_checklist_sources_controls_and_metrics() -> None:
     def fake_app() -> None:
         from rag_chat.domain.models import (

@@ -7,9 +7,13 @@ import math
 from collections.abc import Mapping
 from typing import Any
 
+from trulens.core.otel.instrument import instrument
+from trulens.otel.semconv.trace import SpanAttributes
+
 from rag_chat.domain.errors import ProviderResponseError
 from rag_chat.domain.models import GenerationResult, TokenUsage
 from rag_chat.infrastructure.snowflake._errors import translate_timeout
+from rag_chat.infrastructure.trulens.instrumentation import generation_span_attributes
 
 _AI_COMPLETE_SQL = """
 SELECT TO_JSON(
@@ -33,6 +37,11 @@ class CortexCompleteGenerator:
         self._temperature = temperature
         self._max_tokens = max_tokens
 
+    @instrument(
+        name="sofia.generate",
+        span_type=SpanAttributes.SpanType.GENERATION,
+        attributes=generation_span_attributes,
+    )
     def generate(
         self,
         *,
