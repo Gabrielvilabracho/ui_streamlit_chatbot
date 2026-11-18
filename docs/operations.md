@@ -2,6 +2,13 @@
 
 Use this runbook to configure, observe, and troubleshoot the application without exposing credentials or prompt content.
 
+For the planned `DATALAB.SPAIN` container deployment, use the
+[document lifecycle guide](document-lifecycle.md) to add, categorize and update
+documents, and the [policy guide](document-access-policies.md) for role isolation.
+The [container integration guide](snowflake-container.md) covers `snowflake_app.py`,
+caller identity, named-agent routing and the pending native acceptance checks.
+The checklist below describes the existing local/sample runtime, not that migration.
+
 > The bootstrap now targets the `SOFIA` database, roles, and warehouse. It does not rename or remove objects created with earlier identifiers; existing deployments require an explicit migration plan before rollout.
 
 ## Deployment checklist
@@ -53,7 +60,7 @@ If timeouts recur:
 Recommended production additions:
 
 - prompt-injection classification before retrieval;
-- tenant or document-access filters inside Cortex Search;
+- policy-isolated Search corpora and audited grants for document access; optional filters alone are not an authorization boundary (see the policy guide);
 - PII classification/redaction before generation and telemetry;
 - output policy validation before rendering;
 - trace correlation IDs that do not encode user content.

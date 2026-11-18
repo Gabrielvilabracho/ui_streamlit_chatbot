@@ -15,6 +15,11 @@ uv run streamlit run app.py
 
 Open the local URL shown by Streamlit. The input remains disabled until every required Snowflake setting is present.
 
+For the separate caller-bound container entrypoint, see the
+[Snowsight Cortex Agent integration guide](docs/snowflake-container.md).
+`snowflake_app.py` is implemented locally; native runtime/RBAC validation and
+resource provisioning are still pending. `app.py` retains local direct-RAG behavior.
+
 Use **Settings → Theme** in the Streamlit toolbar to switch between the branded Light and Dark appearances.
 
 > Never commit `.streamlit/secrets.toml` or `.env`. Both are ignored by Git.
@@ -93,6 +98,8 @@ The test suite uses fakes and Streamlit `AppTest`; it performs no live Snowflake
 
 ## Operations and security
 
+- [Document lifecycle guide](docs/document-lifecycle.md): initial GENERAL assignment, adding files, categorization, updates and safe index publication.
+- The container integration uses [role-isolated document policies](docs/document-access-policies.md). Its local code and SQL foundation do not establish deployed role isolation; follow the native acceptance checks before sharing it.
 - Read [`docs/operations.md`](docs/operations.md) before deployment.
 - The application role receives only warehouse/database/schema usage, Cortex Search service usage, and `SNOWFLAKE.CORTEX_USER`.
 - Parameterized Snowpark SQL binds the model and prompt passed to `AI_COMPLETE`.
