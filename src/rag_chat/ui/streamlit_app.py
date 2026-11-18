@@ -2,23 +2,29 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from pathlib import Path
-from typing import Literal, cast
+from typing import Any, Literal, cast
 from urllib.parse import urlparse
 from uuid import uuid4
 
 import streamlit as st
 
-from rag_chat.application.orchestrator import RagOrchestrator
+from rag_chat.application.ports import AnswerService
 from rag_chat.domain.errors import RagError, RagTimeoutError
-from rag_chat.domain.models import ChatMessage, OrchestrationStep
+from rag_chat.domain.models import (
+    ChatMessage,
+    OrchestrationStep,
+    ProgressEvent,
+    ProgressState,
+)
 from rag_chat.ui.markup import (
     copy_button_html,
     metric_plugin_html,
     onboarding_html,
     theme_css,
 )
+from rag_chat.ui.model_status import build_model_status
 from rag_chat.ui.state import (
     UiMessage,
     assistant_message,
@@ -27,7 +33,7 @@ from rag_chat.ui.state import (
     user_message,
 )
 
-OrchestratorFactory = Callable[[], RagOrchestrator]
+OrchestratorFactory = Callable[[], AnswerService]
 BRAND_ASSET_DIR = Path(__file__).resolve().parents[3] / "static" / "brand"
 BRAND_MARK = BRAND_ASSET_DIR / "sofinco-mark.png"
 BRAND_WORDMARK = BRAND_ASSET_DIR / "sofinco_logo.png"
@@ -38,18 +44,21 @@ def run_app(
     orchestrator_factory: OrchestratorFactory | None,
     models: tuple[str, ...],
     configuration_error: str | None,
+    user_identifier: str | None = None,
+    access_role: str | None = None,
+    model_context_limits: Mapping[str, int] | None = None,
 ) -> None:
     """Render the application and execute work only after user input."""
 
     _initialize_state()
     st.html(theme_css(st.context.theme.type))
-    st.logo(str(BRAND_WORDMARK), size="large", icon_image=str(BRAND_MARK))
-    selected_model = _render_sidebar(models, configuration_error)
-    sidebar_sources = st.sidebar.empty()
-
-    def refresh_sidebar_sources() -> None:
-        with sidebar_sources.container():
-            _render_sidebar_sources(_latest_assistant_message())
+    st.logo(str(BRAND_MARK), size="small", icon_image=str(BRAND_MARK))
+    selected_model, refresh_sidebar_sources = _render_sidebar(
+        models,
+        configuration_error,
+        user_identifier=user_identifier,
+        access_role=access_role,
+    )
 
     refresh_sidebar_sources()
     _render_brand_title()
@@ -64,6 +73,16 @@ def run_app(
         )
 
     retry_request = _render_history()
+    model_status_placeholder = st.empty()
+
+    def refresh_model_status() -> None:
+        with model_status_placeholder.container():
+            _render_model_status(
+                selected_model=selected_model,
+                context_limits=model_context_limits or {},
+            )
+
+    refresh_model_status()
     prompt = st.chat_input(
         "Ask about a policy, process, or document",
         key="chat_prompt",
@@ -84,6 +103,7 @@ def run_app(
             history=history,
             orchestrator_factory=orchestrator_factory,
             refresh_sidebar_sources=refresh_sidebar_sources,
+            refresh_model_status=refresh_model_status,
         )
     elif retry_request and orchestrator_factory:
         history = conversation_history(
@@ -96,6 +116,7 @@ def run_app(
             orchestrator_factory=orchestrator_factory,
             replace_message_id=retry_request.message_id,
             refresh_sidebar_sources=refresh_sidebar_sources,
+            refresh_model_status=refresh_model_status,
         )
         st.rerun()
 
@@ -126,9 +147,15 @@ def _latest_assistant_message() -> UiMessage | None:
     )
 
 
-def _render_sidebar(models: tuple[str, ...], configuration_error: str | None) -> str:
-    with st.sidebar:
-        st.caption("Sof~IA · KNOWLEDGE WORKSPACE")
+def _render_sidebar(
+    models: tuple[str, ...],
+    configuration_error: str | None,
+    *,
+    user_identifier: str | None,
+    access_role: str | None,
+) -> tuple[str, Callable[[], None]]:
+    with st.sidebar, st.container(height="stretch", gap="small"):
+        _render_sidebar_identity(user_identifier, access_role)
         st.header("Answer settings")
         selected_model = st.selectbox(
             "Cortex model",
@@ -149,7 +176,35 @@ def _render_sidebar(models: tuple[str, ...], configuration_error: str | None) ->
         ):
             st.session_state.messages = []
             st.rerun()
-    return selected_model
+
+        sidebar_sources = st.empty()
+        st.space("stretch")
+        st.divider()
+        with st.container(horizontal_alignment="center"):
+            st.image(
+                str(BRAND_WORDMARK),
+                alt="Sofinco wordmark",
+                width=180,
+            )
+
+    def refresh_sidebar_sources() -> None:
+        with sidebar_sources.container():
+            _render_sidebar_sources(_latest_assistant_message())
+
+    return selected_model, refresh_sidebar_sources
+
+
+def _render_sidebar_identity(user_identifier: str | None, access_role: str | None) -> None:
+    st.caption("Signed in as")
+    st.markdown(
+        f":material/account_circle: **{_escape_markdown(user_identifier or 'Unavailable')}**"
+    )
+    st.caption("Access role")
+    role_label = access_role or (
+        "Default Snowflake role" if user_identifier else "Role unavailable"
+    )
+    st.badge(role_label, color="gray", icon=":material/admin_panel_settings:")
+    st.divider()
 
 
 def _render_sidebar_sources(message: UiMessage | None) -> None:
@@ -192,22 +247,37 @@ def _generate_answer(
     history: tuple[ChatMessage, ...],
     orchestrator_factory: OrchestratorFactory,
     refresh_sidebar_sources: Callable[[], None],
+    refresh_model_status: Callable[[], None],
     replace_message_id: str | None = None,
 ) -> None:
     request_id = replace_message_id or _message_id("assistant")
     with st.chat_message("assistant", avatar=str(BRAND_MARK)):
-        status = st.status(
-            ":shimmer[Running grounded answer workflow]",
-            expanded=True,
-            type="compact",
-        )
+        stage_statuses: dict[OrchestrationStep, Any] = {}
+        active_stage: OrchestrationStep | None = None
 
-        def mark_progress(step: OrchestrationStep) -> None:
-            status.checkbox(
-                step.value,
-                value=True,
-                disabled=True,
-                key=f"step_{request_id}_{step.name.lower()}",
+        def mark_progress(event: ProgressEvent) -> None:
+            nonlocal active_stage
+            if event.state is ProgressState.STARTED:
+                active_stage = event.step
+                stage_statuses[event.step] = st.status(
+                    f":shimmer[{event.step.value}]",
+                    state="running",
+                    type="step",
+                )
+                return
+            stage_statuses[event.step].update(
+                label=event.step.value,
+                state="complete",
+            )
+            if active_stage is event.step:
+                active_stage = None
+
+        def mark_active_stage_failed() -> None:
+            if active_stage is None:
+                return
+            stage_statuses[active_stage].update(
+                label=f"{active_stage.value} interrupted",
+                state="error",
             )
 
         try:
@@ -219,7 +289,7 @@ def _generate_answer(
                 on_progress=mark_progress,
             )
         except (RagTimeoutError, TimeoutError):
-            status.update(label="Workflow timed out", state="error", expanded=True)
+            mark_active_stage_failed()
             st.error(
                 "Snowflake did not respond before the request deadline. Retry the answer.",
                 title="Request timed out",
@@ -227,11 +297,11 @@ def _generate_answer(
             )
             return
         except RagError as error:
-            status.update(label="Workflow stopped safely", state="error", expanded=True)
+            mark_active_stage_failed()
             st.error(str(error), title="Unable to generate an answer", icon=":material/error:")
             return
         except Exception:
-            status.update(label="Workflow failed", state="error", expanded=True)
+            mark_active_stage_failed()
             st.error(
                 "An unexpected provider error occurred. "
                 "No credentials or prompt content were logged.",
@@ -240,11 +310,6 @@ def _generate_answer(
             )
             return
 
-        status.update(
-            label=f"Workflow complete · {answer.latency_ms:,.0f} ms",
-            state="complete",
-            expanded=False,
-        )
         message = assistant_message(
             question=question,
             answer=answer,
@@ -252,15 +317,53 @@ def _generate_answer(
         )
         messages = _messages()
         if replace_message_id:
+            replacement_status = st.status(
+                ":shimmer[Replacing previous answer]",
+                state="running",
+                type="step",
+            )
             st.session_state.messages = list(replace_message(messages, message))
+            replacement_status.update(
+                label="Previous answer replaced",
+                state="complete",
+            )
             refresh_sidebar_sources()
+            refresh_model_status()
             return
 
         st.session_state.messages = [*messages, message]
         refresh_sidebar_sources()
+        refresh_model_status()
         st.markdown(answer.content)
         _render_sources(message)
         _render_controls(message)
+
+
+def _render_model_status(
+    *,
+    selected_model: str,
+    context_limits: Mapping[str, int],
+) -> None:
+    status = build_model_status(
+        selected_model=selected_model,
+        messages=_messages(),
+        context_limits=context_limits,
+    )
+    with st.container(horizontal=True, gap="small", vertical_alignment="center"):
+        st.badge(status.model, icon=":material/smart_toy:", color="primary")
+        st.badge(
+            status.intensity,
+            icon=":material/tune:",
+            color="gray",
+            help="The selected Snowflake model does not expose a verified intensity setting.",
+        )
+        st.badge(status.tokens, icon=":material/data_usage:", color="gray")
+        st.badge(
+            status.context,
+            icon=":material/donut_large:",
+            color="gray",
+            help="Shown only when a verified context limit is configured for the response model.",
+        )
 
 
 def _render_sources(message: UiMessage) -> None:

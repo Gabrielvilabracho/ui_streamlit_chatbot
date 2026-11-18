@@ -6,8 +6,12 @@ import hashlib
 from collections.abc import Mapping
 from typing import Any
 
+from trulens.core.otel.instrument import instrument
+from trulens.otel.semconv.trace import SpanAttributes
+
 from rag_chat.domain.models import SourceDocument
 from rag_chat.infrastructure.snowflake._errors import translate_timeout
+from rag_chat.infrastructure.trulens.instrumentation import retrieval_span_attributes
 
 
 class CortexSearchRetriever:
@@ -26,6 +30,11 @@ class CortexSearchRetriever:
         self._title_column = title_column
         self._uri_column = uri_column
 
+    @instrument(
+        name="sofia.retrieve",
+        span_type=SpanAttributes.SpanType.RETRIEVAL,
+        attributes=retrieval_span_attributes,
+    )
     def retrieve(self, query: str, *, limit: int) -> tuple[SourceDocument, ...]:
         columns = list(
             dict.fromkeys(

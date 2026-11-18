@@ -67,6 +67,20 @@ export RAG_MODELS="llama3.3-70b,mistral-large2"
 
 Model availability varies by Snowflake region and account. Keep only models enabled for the deployment.
 
+To show context utilization near the chat input, configure only context limits you have
+verified for the exact deployed model versions:
+
+```bash
+export RAG_MODEL_CONTEXT_LIMITS="llama3.3-70b=replace-with-verified-limit"
+```
+
+Use comma-separated `model=limit` entries for multiple models. Unknown limits remain labeled
+as unavailable; the application does not infer them.
+
+TruLens recording and paid batch evaluation are separate, explicit operations. Recording is
+disabled by default, and evaluation never runs in the Streamlit request path. Follow the
+[TruLens operations runbook](docs/trulens-observability.md) before enabling either capability.
+
 ## Verification
 
 ```bash
@@ -94,3 +108,5 @@ The implementation follows current official guidance:
 - [Streamlit `st.feedback`](https://docs.streamlit.io/develop/api-reference/widgets/st.feedback)
 - [Snowflake Cortex Search Python API](https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-search/query-cortex-search-service)
 - [Snowflake `AI_COMPLETE`](https://docs.snowflake.com/en/sql-reference/functions/ai_complete-single-string)
+- [Snowflake AI Observability with TruLens](https://docs.snowflake.com/en/user-guide/snowflake-cortex/ai-observability/trace-applications-trulens)
+- [Evaluate applications with TruLens](https://docs.snowflake.com/en/user-guide/snowflake-cortex/ai-observability/evaluate-applications-trulens)

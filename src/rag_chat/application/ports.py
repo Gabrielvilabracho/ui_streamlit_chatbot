@@ -2,9 +2,27 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable, Sequence
 from typing import Protocol
 
-from rag_chat.domain.models import GenerationResult, RagAnswer, SourceDocument
+from rag_chat.domain.models import (
+    ChatMessage,
+    GenerationResult,
+    ProgressEvent,
+    RagAnswer,
+    SourceDocument,
+)
+
+
+class AnswerService(Protocol):
+    def answer(
+        self,
+        *,
+        question: str,
+        model: str,
+        history: Sequence[ChatMessage] = (),
+        on_progress: Callable[[ProgressEvent], None] | None = None,
+    ) -> RagAnswer: ...
 
 
 class Retriever(Protocol):
