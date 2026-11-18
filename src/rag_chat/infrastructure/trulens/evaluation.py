@@ -54,6 +54,11 @@ class BatchEvaluationSettings:
             raise ConfigurationError(
                 "TRULENS_EVAL_METRICS must select at least one metric."
             )
+        for metric in self.metrics:
+            if not isinstance(metric, ServerMetric):
+                raise ConfigurationError(
+                    f"TRULENS_EVAL_METRICS contains unsupported metric: {metric}."
+                )
         if ServerMetric.CORRECTNESS in self.metrics and not self.ground_truth_column:
             raise ConfigurationError(
                 "TRULENS_EVAL_GROUND_TRUTH_COLUMN is required when correctness is selected."
@@ -75,8 +80,7 @@ class BatchEvaluationSettings:
             raw = nested_secrets.get(short_name, secrets.get(name, environment.get(name, default)))
             if raw is None:
                 return None
-            normalized = str(raw).strip()
-            return normalized or None
+            return str(raw).strip()
 
         dataset_name = _required(value("TRULENS_EVAL_DATASET"), "TRULENS_EVAL_DATASET")
         run_name = _required(value("TRULENS_EVAL_RUN"), "TRULENS_EVAL_RUN")
@@ -90,8 +94,10 @@ class BatchEvaluationSettings:
             dataset_name=dataset_name,
             run_name=run_name,
             judge_model=judge_model,
-            input_column=value("TRULENS_EVAL_INPUT_COLUMN", default="QUESTION")
-            or "QUESTION",
+            input_column=_required(
+                value("TRULENS_EVAL_INPUT_COLUMN", default="QUESTION"),
+                "TRULENS_EVAL_INPUT_COLUMN",
+            ),
             ground_truth_column=ground_truth_column,
             metrics=metrics,
             invocation_max_workers=_optional_positive_integer(

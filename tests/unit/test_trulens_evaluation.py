@@ -70,6 +70,32 @@ def test_evaluation_settings_reject_unknown_server_metrics() -> None:
         )
 
 
+def test_explicit_empty_metric_selection_is_rejected() -> None:
+    with pytest.raises(
+        ConfigurationError,
+        match="TRULENS_EVAL_METRICS must select at least one metric",
+    ):
+        BatchEvaluationSettings.from_sources(
+            secrets={},
+            environ={
+                "TRULENS_EVAL_DATASET": "SOFIA_EVAL_QUESTIONS",
+                "TRULENS_EVAL_RUN": "release-v7",
+                "TRULENS_EVAL_JUDGE_MODEL": "llama3.3-70b",
+                "TRULENS_EVAL_METRICS": "",
+            },
+        )
+
+
+def test_direct_settings_reject_metrics_outside_allow_list() -> None:
+    with pytest.raises(ConfigurationError, match="unsupported metric"):
+        BatchEvaluationSettings(
+            dataset_name="SOFIA_EVAL_QUESTIONS",
+            run_name="release-v7",
+            judge_model="llama3.3-70b",
+            metrics=("unsupported_metric",),  # type: ignore[arg-type]
+        )
+
+
 def test_run_config_maps_named_table_input_and_optional_ground_truth() -> None:
     settings = BatchEvaluationSettings(
         dataset_name="SOFIA_EVAL_QUESTIONS",
