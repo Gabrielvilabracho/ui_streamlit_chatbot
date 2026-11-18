@@ -47,10 +47,12 @@ def run_app(
     user_identifier: str | None = None,
     access_role: str | None = None,
     model_context_limits: Mapping[str, int] | None = None,
+    agent_mode: bool = False,
+    conversation_scope: str | None = None,
 ) -> None:
     """Render the application and execute work only after user input."""
 
-    _initialize_state()
+    _initialize_state(conversation_scope)
     st.html(theme_css(st.context.theme.type))
     st.logo(str(BRAND_MARK), size="small", icon_image=str(BRAND_MARK))
     selected_model, refresh_sidebar_sources = _render_sidebar(
@@ -58,6 +60,7 @@ def run_app(
         configuration_error,
         user_identifier=user_identifier,
         access_role=access_role,
+        agent_mode=agent_mode,
     )
 
     refresh_sidebar_sources()
@@ -106,9 +109,7 @@ def run_app(
             refresh_model_status=refresh_model_status,
         )
     elif retry_request and orchestrator_factory:
-        history = conversation_history(
-            _messages(), before_message_id=retry_request.message_id
-        )
+        history = conversation_history(_messages(), before_message_id=retry_request.message_id)
         _generate_answer(
             question=cast(str, retry_request.prompt),
             model=selected_model,
@@ -121,7 +122,11 @@ def run_app(
         st.rerun()
 
 
-def _initialize_state() -> None:
+def _initialize_state(conversation_scope: str | None = None) -> None:
+    if conversation_scope is not None:
+        if st.session_state.get("conversation_scope") != conversation_scope:
+            st.session_state.messages = []
+        st.session_state.conversation_scope = conversation_scope
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
@@ -153,17 +158,23 @@ def _render_sidebar(
     *,
     user_identifier: str | None,
     access_role: str | None,
+    agent_mode: bool = False,
 ) -> tuple[str, Callable[[], None]]:
     with st.sidebar, st.container(height="stretch", gap="small"):
         _render_sidebar_identity(user_identifier, access_role)
         st.header("Answer settings")
-        selected_model = st.selectbox(
-            "Cortex model",
-            models,
-            key="model_selector",
-            help="Availability depends on your Snowflake account and region.",
-        )
-        st.caption("Retrieval: Cortex Search · Generation: AI_COMPLETE")
+        if agent_mode:
+            selected_model = models[0]
+            st.caption("Model selection is managed in the Cortex Agent configuration.")
+            st.caption("Policy-specific Cortex Agent · viewer's default role")
+        else:
+            selected_model = st.selectbox(
+                "Cortex model",
+                models,
+                key="model_selector",
+                help="Availability depends on your Snowflake account and region.",
+            )
+            st.caption("Retrieval: Cortex Search · Generation: AI_COMPLETE")
         if configuration_error:
             st.badge("Configuration needed", color="orange", icon=":material/key:")
         else:
@@ -391,7 +402,8 @@ def _render_source_items(
     link_width: Literal["content", "stretch"],
 ) -> None:
     for index, source in enumerate(message.sources, start=1):
-        st.markdown(f"**[{index}] {_escape_markdown(source.title)}**")
+        label = source.citation_label if source.citation_label is not None else str(index)
+        st.markdown(f"**[{_escape_markdown(label)}] {_escape_markdown(source.title)}**")
         st.caption(source.content[:preview_length])
         if source.uri and _is_safe_link(source.uri):
             st.link_button(
@@ -432,6 +444,9 @@ def _render_controls(message: UiMessage) -> bool:
             persist_state="session",
         )
     with metrics_column:
+        if not message.usage_reported:
+            st.caption(f"Tokens unavailable · {message.latency_ms:,.0f} ms")
+            return retry
         st.html(
             metric_plugin_html(
                 prompt_tokens=message.prompt_tokens,

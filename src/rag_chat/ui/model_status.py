@@ -50,7 +50,7 @@ def build_model_status(
         ),
         None,
     )
-    if latest is None:
+    if latest is None or not latest.usage_reported:
         return ModelStatus(
             model=f"Model · {selected_model}",
             intensity="Intensity · unavailable",
@@ -66,16 +66,11 @@ def build_model_status(
     if context_limit:
         percentage = total_tokens / context_limit * 100
         precision = 2 if percentage < 1 else 1
-        context = (
-            f"Context · {total_tokens:,} / {context_limit:,} "
-            f"({percentage:.{precision}f}%)"
-        )
+        context = f"Context · {total_tokens:,} / {context_limit:,} ({percentage:.{precision}f}%)"
 
     return ModelStatus(
         model=f"Model · {selected_model}",
         intensity="Intensity · unavailable",
-        tokens=(
-            f"Last response · Input {prompt_tokens:,} / Output {completion_tokens:,}"
-        ),
+        tokens=(f"Last response · Input {prompt_tokens:,} / Output {completion_tokens:,}"),
         context=context,
     )

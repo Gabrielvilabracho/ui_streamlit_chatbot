@@ -19,6 +19,7 @@ class UiMessage:
     prompt_tokens: int = 0
     completion_tokens: int = 0
     latency_ms: float = 0.0
+    usage_reported: bool = True
 
 
 def user_message(content: str, *, message_id: str) -> UiMessage:
@@ -36,6 +37,7 @@ def assistant_message(*, question: str, answer: RagAnswer, message_id: str) -> U
         prompt_tokens=answer.usage.prompt_tokens,
         completion_tokens=answer.usage.completion_tokens,
         latency_ms=answer.latency_ms,
+        usage_reported=answer.usage_reported,
     )
 
 
