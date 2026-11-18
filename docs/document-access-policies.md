@@ -17,6 +17,13 @@ Each document needs exactly one approved classification. Missing, unknown,
 duplicate or conflicting assignments expose no chunks from that document.
 Matching is exact and case-sensitive. The policy-setup script contains no assignments.
 
+The user has now approved **GENERAL for the current parsed documents**. The
+separate [initial assignment script](../sql/classify_existing_documents_general.sql)
+prepares this explicit action without overwriting restrictive/ambiguous existing
+classifications. It has not been run in Snowflake and is not a future-upload
+default. Follow the [document lifecycle guide](document-lifecycle.md) for initial
+assignment, new uploads, categorization, content updates and revocation.
+
 ## Before running any SQL in Snowsight
 
 An authorized administrator must confirm all of the following:

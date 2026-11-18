@@ -113,3 +113,100 @@ def test_policy_setup_neither_replaces_objects_nor_assigns_real_documents() -> N
     assert not re.search(r"\b(REPLACE|INSERT|UPDATE|DELETE|DROP|TRUNCATE|MERGE)\b", sql)
     assert "CURRENT_ROLE" not in sql
     assert "RAG_DOCUEMNT_REGISTRY" not in sql
+
+
+def run_initial_general_queries(connection: sqlite3.Connection) -> None:
+    """Probe actual query bodies; Snowflake scripting/RBAC needs live validation."""
+    sql = re.sub(r"--[^\n]*", "", INITIAL_GENERAL_SQL.read_text())
+    guard = re.search(r"SELECT COUNT\(\*\)\s+INTO :conflict_count\s+(FROM.*?);", sql, re.S)
+    insert = re.search(r"INSERT INTO .*?;", sql, re.S)
+    assert guard is not None and insert is not None
+    assert "IF (conflict_count > 0) THEN\n    RAISE assignment_conflict;\n  END IF;" in sql
+    assert sql.index("RAISE assignment_conflict;") < sql.index("INSERT INTO")
+    assert "BEGIN TRANSACTION;" in sql and "COMMIT;" in sql
+    assert re.search(r"WHEN OTHER THEN\s+ROLLBACK;\s+RAISE;", sql)
+    conflict_count = connection.execute(
+        ("SELECT COUNT(*) " + guard.group(1)).replace("DATALAB.SPAIN.", "")
+    ).fetchone()[0]
+    if conflict_count:
+        raise ValueError("Existing classifications require review")
+    connection.execute(insert.group().replace("DATALAB.SPAIN.", ""))
+
+
+def test_initial_general_assignment_is_complete_and_rerunnable(
+    corpus: sqlite3.Connection,
+) -> None:
+    corpus.execute("DELETE FROM SOFIA_DOCUMENT_CLASSIFICATIONS")
+    corpus.execute("INSERT INTO RAG_DOCUMENTS VALUES (101, 'duplicate source row.pdf')")
+    source_rows = corpus.execute("SELECT * FROM RAG_DOCUMENTS").fetchall()
+    chunks = corpus.execute("SELECT * FROM RAG_CHUNKS").fetchall()
+    run_initial_general_queries(corpus)
+    assignments = corpus.execute(
+        "SELECT DOC_ID, ACCESS_POLICY FROM SOFIA_DOCUMENT_CLASSIFICATIONS ORDER BY DOC_ID"
+    ).fetchall()
+    assert assignments == [(doc_id, "GENERAL") for doc_id in (101, 202, 303, 404, 505, 606, 707)]
+    run_initial_general_queries(corpus)
+    assert (
+        corpus.execute(
+            "SELECT DOC_ID, ACCESS_POLICY FROM SOFIA_DOCUMENT_CLASSIFICATIONS ORDER BY DOC_ID"
+        ).fetchall()
+        == assignments
+    )
+    assert corpus.execute("SELECT * FROM RAG_DOCUMENTS").fetchall() == source_rows
+    assert corpus.execute("SELECT * FROM RAG_CHUNKS").fetchall() == chunks
+
+
+@pytest.mark.parametrize(
+    "labels", [("PRIVACY",), ("CREDIT_AFTERSALES",), ("UNKNOWN",), ("GENERAL", "GENERAL")]
+)
+def test_initial_general_rejects_conflicts_without_partial_assignment(
+    corpus: sqlite3.Connection, labels: tuple[str, ...]
+) -> None:
+    corpus.execute("DELETE FROM SOFIA_DOCUMENT_CLASSIFICATIONS")
+    corpus.executemany(
+        "INSERT INTO SOFIA_DOCUMENT_CLASSIFICATIONS VALUES (202, ?)",
+        [(label,) for label in labels],
+    )
+    before = tuple(corpus.iterdump())
+    with pytest.raises(ValueError, match="Existing classifications require review"):
+        run_initial_general_queries(corpus)
+    assert tuple(corpus.iterdump()) == before
+
+
+def new_document_assignment_query() -> str:
+    """Keep the runbook's operator-facing SQL example under regression coverage."""
+    match = re.search(
+        r"INSERT INTO DATALAB\.SPAIN\.SOFIA_DOCUMENT_CLASSIFICATIONS .*?;",
+        LIFECYCLE_GUIDE.read_text(),
+        re.S,
+    )
+    assert match is not None
+    return (
+        match.group()
+        .replace("DATALAB.SPAIN.", "")
+        .replace("$document_id", ":document_id")
+        .replace("$access_policy", ":access_policy")
+    )
+
+
+@pytest.mark.parametrize("policy", [entry[0] for entry in POLICIES])
+def test_guide_assigns_a_new_document_once(corpus: sqlite3.Connection, policy: str) -> None:
+    query = new_document_assignment_query()
+    parameters = {"document_id": 404, "access_policy": policy}
+    assert corpus.execute(query, parameters).rowcount == 1
+    assert corpus.execute(query, parameters).rowcount == 0
+    assert corpus.execute(
+        "SELECT ACCESS_POLICY FROM SOFIA_DOCUMENT_CLASSIFICATIONS WHERE DOC_ID = 404"
+    ).fetchall() == [(policy,)]
+
+
+@pytest.mark.parametrize("doc_id,policy", [(999, "GENERAL"), (404, "UNKNOWN"), (202, "GENERAL")])
+def test_guide_rejects_missing_invalid_or_existing_assignments_without_mutation(
+    corpus: sqlite3.Connection, doc_id: int, policy: str
+) -> None:
+    before = tuple(corpus.iterdump())
+    result = corpus.execute(
+        new_document_assignment_query(), {"document_id": doc_id, "access_policy": policy}
+    )
+    assert result.rowcount == 0
+    assert tuple(corpus.iterdump()) == before
