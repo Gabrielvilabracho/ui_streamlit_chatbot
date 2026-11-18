@@ -24,6 +24,7 @@ class SourceDocument:
     title: str
     uri: str | None = None
     score: float | None = None
+    citation_label: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -56,6 +57,7 @@ class RagAnswer:
     sources: tuple[SourceDocument, ...]
     usage: TokenUsage
     latency_ms: float
+    usage_reported: bool = True
 
 
 class OrchestrationStep(StrEnum):
