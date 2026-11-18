@@ -11,3 +11,8 @@ content_column = "CHUNK"
 id_column = "CHUNK_ID"
 title_column = "TITLE"
 uri_column = "SOURCE_URL"
+
+[trulens]
+enabled = false
+app_name = "SOFIA_RAG"
+app_version = "v1"
