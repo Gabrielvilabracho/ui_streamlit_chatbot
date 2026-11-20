@@ -8,6 +8,7 @@ from typing import Any
 
 from rag_chat.application.defaults import LoggingTelemetry
 from rag_chat.application.guardrails import BaselineGuardrail
+from rag_chat.application.guardrails.runtime import GuardrailSettings, RuntimeGuardrails
 from rag_chat.application.hooks import ProgressHook
 from rag_chat.application.hooks.diagnostics import DEFAULT_DIAGNOSTIC_HOOKS, DiagnosticHook
 from rag_chat.application.orchestrator import RagOrchestrator
@@ -32,6 +33,7 @@ def build_orchestrator(
     hooks: Sequence[ProgressHook] = (),
     guardrail: Guardrail | None = None,
     diagnostic_hooks: Sequence[DiagnosticHook] = DEFAULT_DIAGNOSTIC_HOOKS,
+    guardrail_settings: GuardrailSettings | None = None,
 ) -> AnswerService:
     """Construct the concrete runtime at the application's outermost boundary."""
 
@@ -45,11 +47,15 @@ def build_orchestrator(
             title_column=settings.title_column,
             uri_column=settings.uri_column,
         ),
-        generator=CortexCompleteGenerator(session=session),
+        generator=CortexCompleteGenerator(session=session, require_timeout=True),
         guardrail=guardrail if guardrail is not None else BaselineGuardrail(),
         telemetry=LoggingTelemetry(),
         hooks=hooks,
         diagnostic_hooks=diagnostic_hooks,
+        safety=RuntimeGuardrails(
+            settings=guardrail_settings or GuardrailSettings.from_environment()
+        ),
+        subject=f"direct:{settings.account}:{settings.user}",
     )
     return with_observability(
         service=orchestrator,

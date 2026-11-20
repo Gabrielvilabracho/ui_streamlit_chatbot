@@ -12,6 +12,7 @@ from typing import Any, Protocol, TypeVar, cast
 from trulens.core.otel.instrument import instrument
 from trulens.otel.semconv.trace import GenAIAttributes, SpanAttributes
 
+from rag_chat.application.guardrails.privacy import trace_text
 from rag_chat.application.ports import AnswerService
 from rag_chat.domain.models import (
     ChatMessage,
@@ -199,9 +200,9 @@ def retrieval_span_attributes(
     del error
     documents = result or ()
     return {
-        SpanAttributes.RETRIEVAL.QUERY_TEXT: str(kwargs.get("query", "")),
+        SpanAttributes.RETRIEVAL.QUERY_TEXT: trace_text(str(kwargs.get("query", ""))),
         SpanAttributes.RETRIEVAL.RETRIEVED_CONTEXTS: [
-            document.content for document in documents
+            trace_text(document.content) for document in documents
         ],
         SpanAttributes.RETRIEVAL.NUM_CONTEXTS: len(documents),
     }
@@ -216,16 +217,16 @@ def generation_span_attributes(
     del error
     requested_model = str(kwargs.get("model", ""))
     model = result.model if result else requested_model
-    usage = result.usage if result else None
+    usage = result.usage if result and result.usage_reported else None
     return {
         SpanAttributes.COST.MODEL: model,
-        SpanAttributes.COST.NUM_PROMPT_TOKENS: usage.prompt_tokens if usage else 0,
-        SpanAttributes.COST.NUM_COMPLETION_TOKENS: usage.completion_tokens if usage else 0,
-        SpanAttributes.COST.NUM_TOKENS: usage.total_tokens if usage else 0,
+        SpanAttributes.COST.NUM_PROMPT_TOKENS: usage.prompt_tokens if usage else None,
+        SpanAttributes.COST.NUM_COMPLETION_TOKENS: usage.completion_tokens if usage else None,
+        SpanAttributes.COST.NUM_TOKENS: usage.total_tokens if usage else None,
         GenAIAttributes.SYSTEM.NAME: "snowflake",
         GenAIAttributes.OPERATION.NAME: "text_completion",
-        "prompt": str(kwargs.get("prompt", "")),
-        "output": result.content if result else "",
+        "prompt": trace_text(str(kwargs.get("prompt", ""))),
+        "output": trace_text(result.content) if result else "",
     }
 
 
@@ -236,13 +237,11 @@ def record_root_span_attributes(
     **kwargs: object,
 ) -> dict[str, object]:
     attributes: dict[str, object] = {
-        SpanAttributes.RECORD_ROOT.INPUT: str(kwargs.get("question", "")),
-        SpanAttributes.COST.MODEL: result.model
-        if result
-        else str(kwargs.get("model", "")),
+        SpanAttributes.RECORD_ROOT.INPUT: trace_text(str(kwargs.get("question", ""))),
+        SpanAttributes.COST.MODEL: result.model if result else str(kwargs.get("model", "")),
     }
     if result:
-        attributes[SpanAttributes.RECORD_ROOT.OUTPUT] = result.content
+        attributes[SpanAttributes.RECORD_ROOT.OUTPUT] = trace_text(result.content)
     if error:
         attributes[SpanAttributes.RECORD_ROOT.ERROR] = type(error).__name__
     return attributes

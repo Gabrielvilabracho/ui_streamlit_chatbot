@@ -7,12 +7,19 @@ Deployment must separately prove caller grants and policy-isolated agent/Search 
 from __future__ import annotations
 
 import json
+import math
 import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
 from rag_chat.application.guardrails import BaselineGuardrail
+from rag_chat.application.guardrails.runtime import (
+    GREETING,
+    RequestDeadline,
+    RuntimeGuardrails,
+    UsageTicket,
+)
 from rag_chat.application.hooks import HookDispatcher, ProgressHook
 from rag_chat.application.hooks.diagnostics import (
     DEFAULT_DIAGNOSTIC_HOOKS,
@@ -53,20 +60,36 @@ class Viewer:
         return f"DATALAB.SPAIN.SOFIA_{self.policy}_AGENT"
 
 
-def _query(session: Any, sql: str, params: list[str] | None = None) -> list[Any]:
+def _query(
+    session: Any,
+    sql: str,
+    params: list[str] | None = None,
+    *,
+    deadline: RequestDeadline | None = None,
+) -> list[Any]:
+    timeout = (
+        _TIMEOUT
+        if deadline is None
+        else {"STATEMENT_TIMEOUT_IN_SECONDS": str(min(60, max(1, math.ceil(deadline.remaining()))))}
+    )
     try:
-        return list(session.sql(sql, params=params).collect(statement_params=_TIMEOUT))
+        rows = list(session.sql(sql, params=params).collect(statement_params=timeout))
     except Exception as error:
         translate_timeout(error, operation="Cortex Agent caller connection")
         raise ProviderResponseError(
             "The Snowflake caller connection failed. Check the runtime and caller grants."
         ) from error
+    if deadline:
+        deadline.remaining()
+    return rows
 
 
-def identify_viewer(session: Any) -> Viewer:
+def identify_viewer(session: Any, *, deadline: RequestDeadline | None = None) -> Viewer:
     """Use the default primary role only; no secondary-role or owner escalation."""
-    _query(session, "USE SECONDARY ROLES NONE")
-    rows = _query(session, "SELECT CURRENT_USER() AS VIEWER, CURRENT_ROLE() AS ACCESS_ROLE")
+    _query(session, "USE SECONDARY ROLES NONE", deadline=deadline)
+    rows = _query(
+        session, "SELECT CURRENT_USER() AS VIEWER, CURRENT_ROLE() AS ACCESS_ROLE", deadline=deadline
+    )
     if len(rows) != 1:
         raise ConfigurationError("Snowflake did not return a verified viewer identity.")
     user, role = rows[0]["VIEWER"], rows[0]["ACCESS_ROLE"]
@@ -87,6 +110,7 @@ class CortexAgentService:
         guardrail: Guardrail | None = None,
         diagnostic_hooks: Sequence[DiagnosticHook] = DEFAULT_DIAGNOSTIC_HOOKS,
         hook_clock: Callable[[], float] = time.perf_counter,
+        safety: RuntimeGuardrails | None = None,
     ) -> None:
         self._session = session
         self._viewer = viewer
@@ -94,6 +118,7 @@ class CortexAgentService:
         self._guardrail = guardrail if guardrail is not None else BaselineGuardrail()
         self._diagnostics = DiagnosticDispatcher(hooks=tuple(diagnostic_hooks))
         self._hook_clock = hook_clock
+        self._safety = safety
 
     def answer(
         self,
@@ -118,8 +143,8 @@ class CortexAgentService:
         if model != AGENT_MODEL:
             raise ConfigurationError("Choose the model in the agent configuration, not the app.")
 
-    def _verify_viewer(self) -> None:
-        if identify_viewer(self._session) != self._viewer:
+    def _verify_viewer(self, deadline: RequestDeadline | None = None) -> None:
+        if identify_viewer(self._session, deadline=deadline) != self._viewer:
             raise ConfigurationError(
                 "The viewer identity changed. Reload and start a new conversation."
             )
@@ -132,13 +157,30 @@ class CortexAgentService:
         history: Sequence[ChatMessage],
         observer: HookObserver,
     ) -> RagAnswer:
+        safety = self._safety
+        deadline = safety.deadline() if safety else None
+        ticket: UsageTicket | None = None
         observer.run("Validate model", lambda: self._validate_model(model), progress=False)
         observer.run(
             OrchestrationStep.VALIDATE_INPUT,
             lambda: self._guardrail.validate_input(question),
             progress=False,
         )
-        observer.run("Verify identity", self._verify_viewer, progress=False)
+        if safety:
+            question, history = observer.run(
+                OrchestrationStep.VALIDATE_INPUT,
+                lambda: safety.prepare(question, history),
+                progress=False,
+            )
+        observer.run("Verify identity", lambda: self._verify_viewer(deadline), progress=False)
+        if safety and safety.is_greeting(question):
+            ticket = observer.run(
+                OrchestrationStep.VALIDATE_INPUT,
+                lambda: safety.reserve("agent:" + self._viewer.user),
+                progress=False,
+            )
+            ticket.finish(TokenUsage())
+            return RagAnswer(GREETING, AGENT_MODEL, (), TokenUsage(), 0.0)
         # Retry history already contains the current question; ordinary submissions do not.
         messages = list(history)
         if not messages or messages[-1] != ChatMessage("user", question):
@@ -152,6 +194,17 @@ class CortexAgentService:
                 "stream": False,
             }
         )
+        if safety:
+            observer.run(
+                OrchestrationStep.VALIDATE_INPUT,
+                lambda: safety.check_context(request),
+                progress=False,
+            )
+            ticket = observer.run(
+                OrchestrationStep.VALIDATE_INPUT,
+                lambda: safety.reserve("agent:" + self._viewer.user),
+                progress=False,
+            )
         started = time.perf_counter()
 
         def generate() -> RagAnswer:
@@ -159,11 +212,14 @@ class CortexAgentService:
                 self._session,
                 "SELECT SNOWFLAKE.CORTEX.DATA_AGENT_RUN(?, ?) AS RESPONSE",
                 [self._viewer.agent, request],
+                deadline=deadline,
             )
             if len(rows) != 1:
                 raise ProviderResponseError("Cortex Agent returned no complete answer.")
             payload = _payload(rows[0]["RESPONSE"])
             usage, reported = _usage(payload)
+            if ticket:
+                ticket.finish(usage if reported else None)
             self._diagnostics.emit(TokenUsageEvent(usage if reported else None))
             text, sources = _text_and_sources(payload)
             self._diagnostics.emit(SourcesEvent(len(sources), "cited"))
@@ -172,6 +228,14 @@ class CortexAgentService:
                 lambda: self._guardrail.validate_output(text),
                 progress=False,
             )
+            if safety:
+                text, sources = observer.run(
+                    OrchestrationStep.VALIDATE_OUTPUT,
+                    lambda: safety.ground(text, sources, native=True),
+                    progress=False,
+                )
+            if deadline:
+                deadline.remaining()
             return RagAnswer(
                 content=text,
                 model=AGENT_MODEL,
@@ -181,7 +245,11 @@ class CortexAgentService:
                 usage_reported=reported,
             )
 
-        return observer.run(OrchestrationStep.GENERATE_ANSWER, generate)
+        try:
+            return observer.run(OrchestrationStep.GENERATE_ANSWER, generate)
+        finally:
+            if ticket:
+                ticket.finish()
 
 
 def _payload(raw: object) -> Mapping[str, Any]:

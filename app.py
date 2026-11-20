@@ -10,6 +10,7 @@ from typing import Any
 
 import streamlit as st
 
+from rag_chat.application.guardrails.runtime import GuardrailSettings
 from rag_chat.application.ports import AnswerService
 from rag_chat.composition import build_orchestrator
 from rag_chat.domain.errors import ConfigurationError
@@ -26,8 +27,11 @@ BRAND_MARK = Path(__file__).resolve().parent / "static" / "brand" / "sofinco-mar
 def _cached_orchestrator(
     settings: SnowflakeSettings,
     observability_settings: ObservabilitySettings,
+    guardrail_settings: GuardrailSettings,
 ) -> AnswerService:
-    return build_orchestrator(settings, observability_settings)
+    return build_orchestrator(
+        settings, observability_settings, guardrail_settings=guardrail_settings
+    )
 
 
 def _secret_values() -> Mapping[str, Any]:
@@ -50,6 +54,7 @@ user_identifier: str | None = None
 access_role: str | None = None
 secret_values = _secret_values()
 try:
+    guardrail_settings = GuardrailSettings.from_environment()
     snowflake_settings = SnowflakeSettings.from_sources(
         secrets=secret_values,
         environ=os.environ,
@@ -68,6 +73,7 @@ else:
         _cached_orchestrator,
         snowflake_settings,
         observability_settings,
+        guardrail_settings,
     )
     user_identifier = snowflake_settings.user
     access_role = snowflake_settings.role
@@ -84,7 +90,5 @@ run_app(
     configuration_error=configuration_error,
     user_identifier=user_identifier,
     access_role=access_role,
-    model_context_limits=parse_model_context_limits(
-        os.getenv("RAG_MODEL_CONTEXT_LIMITS", "")
-    ),
+    model_context_limits=parse_model_context_limits(os.getenv("RAG_MODEL_CONTEXT_LIMITS", "")),
 )

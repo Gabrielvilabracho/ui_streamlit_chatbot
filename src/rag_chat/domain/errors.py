@@ -16,6 +16,12 @@ class GuardrailRule(StrEnum):
     INPUT_MAX_CHARACTERS = "input.max_characters"
     OUTPUT_EMPTY = "output.empty"
     OUTPUT_MAX_CHARACTERS = "output.max_characters"
+    SECRET = "privacy.secret"
+    INJECTION = "input.injection_signal"
+    CONTEXT_LIMIT = "context.max_bytes"
+    CITATION = "output.invalid_citation"
+    RATE_LIMIT = "request.rate_limit"
+    TOKEN_QUOTA = "request.token_quota"
     CUSTOM = "custom"
 
 
