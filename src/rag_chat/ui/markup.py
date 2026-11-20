@@ -8,21 +8,12 @@ import html
 
 
 def theme_css(theme_type: str | None = "light") -> str:
-    """Return Sof~IA tokens with theme-safe custom element styling."""
+    """Follow the native color scheme even when theme switching does not rerun Python."""
+
+    # Keep the existing call signature; Streamlit's inherited color-scheme is authoritative.
+    del theme_type
 
     shared_tokens = """
-  --brand-primary: #17ABB5;
-  --brand-accent: #1AAEB7;
-  --brand-soft: #CFEFF0;
-  --brand-surface: #EAF5F7;
-  --on-brand-text: #222222;
-  --brand-muted-text: #566467;
-  --brand-accent-text: #0A6067;
-  --brand-control-border: #566467;
-  --on-state-text: #FFFFFF;
-  --state-error-surface: #B42318;
-  --state-success-surface: #166534;
-  --state-warning-surface: #8A4B08;
   --font-display: "Manrope", "Helvetica Neue", Arial, sans-serif;
   --font-interface: "Helvetica Neue", "Suisse International", "Neue Montreal", Arial, sans-serif;
   --font-mono: "IBM Plex Mono", Consolas, monospace;
@@ -35,45 +26,36 @@ def theme_css(theme_type: str | None = "light") -> str:
   --size-label: 0.75rem;
 """.strip()
 
-    if theme_type == "dark":
-        theme_tokens = """
-  --page: #222222;
-  --surface: #2B2B2B;
-  --surface-neutral: #333333;
-  --text-primary: #FFFFFF;
-  --text-secondary: #EAF5F7;
-  --text-accent: #CFEFF0;
-  --border: #4B4F55;
-  --information-surface: #2B2B2B;
-  --badge-surface: #333333;
-  --control-surface: #2B2B2B;
-  --control-border: #EAF5F7;
-  --control-hover: #333333;
-  --control-active: #4B4F55;
-  --focus-ring: #17ABB5;
-  --state-error: #FFB4AB;
-  --state-success: #A7F3D0;
-  --state-warning: #FDE68A;
-""".strip()
-    else:
-        theme_tokens = """
-  --page: #F3F0EA;
-  --surface: #FFFFFF;
-  --surface-neutral: #F2F2F2;
-  --text-primary: #222222;
-  --text-secondary: #566467;
-  --text-accent: #0A6067;
-  --border: #D7D2C8;
-  --information-surface: #EAF5F7;
-  --badge-surface: #CFEFF0;
-  --control-surface: #FFFFFF;
-  --control-border: #566467;
-  --control-hover: #F2F2F2;
-  --control-active: #CFEFF0;
-  --focus-ring: #0A6067;
-  --state-error: #B42318;
-  --state-success: #166534;
-  --state-warning: #8A4B08;
+    theme_tokens = """
+  --brand-primary: light-dark(#222222, #17ABB5);
+  --brand-accent: light-dark(#222222, #1AAEB7);
+  --brand-soft: light-dark(#F2F2F2, #CFEFF0);
+  --brand-surface: light-dark(#FFFFFF, #EAF5F7);
+  --on-brand-text: #222222;
+  --brand-muted-text: light-dark(#222222, #566467);
+  --brand-accent-text: light-dark(#222222, #0A6067);
+  --brand-control-border: light-dark(#222222, #566467);
+  --on-state-text: #FFFFFF;
+  --state-error-surface: light-dark(#222222, #B42318);
+  --state-success-surface: light-dark(#222222, #166534);
+  --state-warning-surface: light-dark(#222222, #8A4B08);
+  --page: light-dark(#FFFFFF, #222222);
+  --surface: light-dark(#FFFFFF, #2B2B2B);
+  --surface-neutral: light-dark(#F2F2F2, #333333);
+  --text-primary: light-dark(#222222, #FFFFFF);
+  --text-secondary: light-dark(#222222, #EAF5F7);
+  --text-accent: light-dark(#222222, #CFEFF0);
+  --border: light-dark(#222222, #4B4F55);
+  --information-surface: light-dark(#F2F2F2, #2B2B2B);
+  --badge-surface: light-dark(#F2F2F2, #333333);
+  --control-surface: light-dark(#FFFFFF, #2B2B2B);
+  --control-border: light-dark(#222222, #EAF5F7);
+  --control-hover: light-dark(#F2F2F2, #333333);
+  --control-active: light-dark(#F2F2F2, #4B4F55);
+  --focus-ring: light-dark(#222222, #17ABB5);
+  --state-error: light-dark(#222222, #FFB4AB);
+  --state-success: light-dark(#222222, #A7F3D0);
+  --state-warning: light-dark(#222222, #FDE68A);
 """.strip()
 
     styles = """
@@ -274,10 +256,7 @@ select:focus-visible {
   }
 }
 """.strip()
-    return (
-        f"<style>\n:root {{\n{shared_tokens}\n{theme_tokens}\n}}"
-        f"\n\n{styles}\n</style>"
-    )
+    return f"<style>\n:root {{\n{shared_tokens}\n{theme_tokens}\n}}\n\n{styles}\n</style>"
 
 
 def onboarding_html() -> str:
