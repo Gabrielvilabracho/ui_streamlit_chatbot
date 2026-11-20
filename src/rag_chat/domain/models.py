@@ -46,6 +46,7 @@ class GenerationResult:
     content: str
     model: str
     usage: TokenUsage
+    usage_reported: bool = True
 
 
 @dataclass(frozen=True, slots=True)

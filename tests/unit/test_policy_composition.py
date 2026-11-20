@@ -24,17 +24,26 @@ def test_composition_wires_registered_hooks_and_guardrails(monkeypatch) -> None:
         ),
     )
     settings = SimpleNamespace(
-        content_column="content", id_column="id", title_column="title", uri_column="uri"
+        content_column="content",
+        id_column="id",
+        title_column="title",
+        uri_column="uri",
     )
     calls = []
     registered: list[ProgressEvent] = []
     progress: list[ProgressEvent] = []
+    diagnostics = []
     baseline = BaselineGuardrail()
     policy = GuardrailPipeline(
         input_rules=(baseline.validate_input, lambda value: calls.append(("input", value))),
         output_rules=(baseline.validate_output, lambda value: calls.append(("output", value))),
     )
-    service = composition.build_orchestrator(settings, hooks=(registered.append,), guardrail=policy)
+    service = composition.build_orchestrator(
+        settings,
+        hooks=(registered.append,),
+        guardrail=policy,
+        diagnostic_hooks=(diagnostics.append,),
+    )
 
     answer = service.answer(question="question", model="model", on_progress=progress.append)
 
@@ -42,5 +51,6 @@ def test_composition_wires_registered_hooks_and_guardrails(monkeypatch) -> None:
     assert calls == [("input", "question"), ("output", "answer")]
     assert registered == progress
     assert len(progress) == 10
+    assert len(diagnostics) == 8
     default_service = composition.build_orchestrator(settings)
     assert default_service.answer(question="question", model="model").content == answer.content

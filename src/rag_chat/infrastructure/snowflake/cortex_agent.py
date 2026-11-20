@@ -14,13 +14,19 @@ from typing import Any
 
 from rag_chat.application.guardrails import BaselineGuardrail
 from rag_chat.application.hooks import HookDispatcher, ProgressHook
+from rag_chat.application.hooks.diagnostics import (
+    DEFAULT_DIAGNOSTIC_HOOKS,
+    DiagnosticDispatcher,
+    DiagnosticHook,
+)
+from rag_chat.application.hooks.events import SourcesEvent, TokenUsageEvent
+from rag_chat.application.hooks.observer import HookObserver
 from rag_chat.application.ports import Guardrail
 from rag_chat.domain.errors import ConfigurationError, ProviderResponseError
 from rag_chat.domain.models import (
     ChatMessage,
     OrchestrationStep,
     ProgressEvent,
-    ProgressState,
     RagAnswer,
     SourceDocument,
     TokenUsage,
@@ -79,11 +85,15 @@ class CortexAgentService:
         viewer: Viewer,
         hooks: Sequence[ProgressHook] = (),
         guardrail: Guardrail | None = None,
+        diagnostic_hooks: Sequence[DiagnosticHook] = DEFAULT_DIAGNOSTIC_HOOKS,
+        hook_clock: Callable[[], float] = time.perf_counter,
     ) -> None:
         self._session = session
         self._viewer = viewer
         self._hooks = HookDispatcher(hooks=tuple(hooks))
         self._guardrail = guardrail if guardrail is not None else BaselineGuardrail()
+        self._diagnostics = DiagnosticDispatcher(hooks=tuple(diagnostic_hooks))
+        self._hook_clock = hook_clock
 
     def answer(
         self,
@@ -93,13 +103,42 @@ class CortexAgentService:
         history: Sequence[ChatMessage] = (),
         on_progress: Callable[[ProgressEvent], None] | None = None,
     ) -> RagAnswer:
+        observer = HookObserver(
+            self._diagnostics, progress=self._hooks, on_progress=on_progress, clock=self._hook_clock
+        )
+        return observer.run(
+            None,
+            lambda: self._answer(
+                question=question, model=model, history=history, observer=observer
+            ),
+            progress=False,
+        )
+
+    def _validate_model(self, model: str) -> None:
         if model != AGENT_MODEL:
             raise ConfigurationError("Choose the model in the agent configuration, not the app.")
-        self._guardrail.validate_input(question)
+
+    def _verify_viewer(self) -> None:
         if identify_viewer(self._session) != self._viewer:
             raise ConfigurationError(
                 "The viewer identity changed. Reload and start a new conversation."
             )
+
+    def _answer(
+        self,
+        *,
+        question: str,
+        model: str,
+        history: Sequence[ChatMessage],
+        observer: HookObserver,
+    ) -> RagAnswer:
+        observer.run("Validate model", lambda: self._validate_model(model), progress=False)
+        observer.run(
+            OrchestrationStep.VALIDATE_INPUT,
+            lambda: self._guardrail.validate_input(question),
+            progress=False,
+        )
+        observer.run("Verify identity", self._verify_viewer, progress=False)
         # Retry history already contains the current question; ordinary submissions do not.
         messages = list(history)
         if not messages or messages[-1] != ChatMessage("user", question):
@@ -114,34 +153,35 @@ class CortexAgentService:
             }
         )
         started = time.perf_counter()
-        self._hooks.emit(
-            ProgressEvent(OrchestrationStep.GENERATE_ANSWER, ProgressState.STARTED),
-            on_progress=on_progress,
-        )
-        rows = _query(
-            self._session,
-            "SELECT SNOWFLAKE.CORTEX.DATA_AGENT_RUN(?, ?) AS RESPONSE",
-            [self._viewer.agent, request],
-        )
-        if len(rows) != 1:
-            raise ProviderResponseError("Cortex Agent returned no complete answer.")
-        payload = _payload(rows[0]["RESPONSE"])
-        text, sources = _text_and_sources(payload)
-        self._guardrail.validate_output(text)
-        usage, reported = _usage(payload)
-        answer = RagAnswer(
-            content=text,
-            model=AGENT_MODEL,
-            sources=sources,
-            usage=usage,
-            latency_ms=(time.perf_counter() - started) * 1000,
-            usage_reported=reported,
-        )
-        self._hooks.emit(
-            ProgressEvent(OrchestrationStep.GENERATE_ANSWER, ProgressState.COMPLETED),
-            on_progress=on_progress,
-        )
-        return answer
+
+        def generate() -> RagAnswer:
+            rows = _query(
+                self._session,
+                "SELECT SNOWFLAKE.CORTEX.DATA_AGENT_RUN(?, ?) AS RESPONSE",
+                [self._viewer.agent, request],
+            )
+            if len(rows) != 1:
+                raise ProviderResponseError("Cortex Agent returned no complete answer.")
+            payload = _payload(rows[0]["RESPONSE"])
+            usage, reported = _usage(payload)
+            self._diagnostics.emit(TokenUsageEvent(usage if reported else None))
+            text, sources = _text_and_sources(payload)
+            self._diagnostics.emit(SourcesEvent(len(sources), "cited"))
+            observer.run(
+                OrchestrationStep.VALIDATE_OUTPUT,
+                lambda: self._guardrail.validate_output(text),
+                progress=False,
+            )
+            return RagAnswer(
+                content=text,
+                model=AGENT_MODEL,
+                sources=sources,
+                usage=usage,
+                latency_ms=(time.perf_counter() - started) * 1000,
+                usage_reported=reported,
+            )
+
+        return observer.run(OrchestrationStep.GENERATE_ANSWER, generate)
 
 
 def _payload(raw: object) -> Mapping[str, Any]:

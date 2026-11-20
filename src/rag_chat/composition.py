@@ -9,6 +9,7 @@ from typing import Any
 from rag_chat.application.defaults import LoggingTelemetry
 from rag_chat.application.guardrails import BaselineGuardrail
 from rag_chat.application.hooks import ProgressHook
+from rag_chat.application.hooks.diagnostics import DEFAULT_DIAGNOSTIC_HOOKS, DiagnosticHook
 from rag_chat.application.orchestrator import RagOrchestrator
 from rag_chat.application.ports import AnswerService, Guardrail
 from rag_chat.infrastructure.snowflake.cortex_complete import CortexCompleteGenerator
@@ -30,6 +31,7 @@ def build_orchestrator(
     *,
     hooks: Sequence[ProgressHook] = (),
     guardrail: Guardrail | None = None,
+    diagnostic_hooks: Sequence[DiagnosticHook] = DEFAULT_DIAGNOSTIC_HOOKS,
 ) -> AnswerService:
     """Construct the concrete runtime at the application's outermost boundary."""
 
@@ -47,6 +49,7 @@ def build_orchestrator(
         guardrail=guardrail if guardrail is not None else BaselineGuardrail(),
         telemetry=LoggingTelemetry(),
         hooks=hooks,
+        diagnostic_hooks=diagnostic_hooks,
     )
     return with_observability(
         service=orchestrator,

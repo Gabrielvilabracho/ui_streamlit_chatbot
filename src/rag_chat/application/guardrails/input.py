@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 
-from rag_chat.domain.errors import GuardrailViolation
+from rag_chat.domain.errors import GuardrailRule, GuardrailViolation
 
 
 @dataclass(frozen=True, slots=True)
@@ -12,6 +12,11 @@ class InputGuardrail:
     def validate(self, value: str) -> None:
         normalized = value.strip()
         if not normalized:
-            raise GuardrailViolation("The question cannot be empty.")
+            raise GuardrailViolation(
+                "The question cannot be empty.", rule=GuardrailRule.INPUT_EMPTY
+            )
         if len(normalized) > self.max_characters:
-            raise GuardrailViolation("The question is too long to process safely.")
+            raise GuardrailViolation(
+                "The question is too long to process safely.",
+                rule=GuardrailRule.INPUT_MAX_CHARACTERS,
+            )
