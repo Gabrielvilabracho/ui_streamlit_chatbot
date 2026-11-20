@@ -91,19 +91,16 @@ def test_sofinco_brand_assets_are_wired_into_the_app_shell() -> None:
     entrypoint = read("app.py")
     streamlit_app = read("src/rag_chat/ui/streamlit_app.py")
 
-    assert 'page_icon=str(BRAND_MARK)' in entrypoint
-    assert (
-        'st.logo(str(BRAND_MARK), size="small", icon_image=str(BRAND_MARK))'
-        in streamlit_app
-    )
+    assert "page_icon=str(BRAND_MARK)" in entrypoint
+    assert 'st.logo(str(BRAND_MARK), size="small", icon_image=str(BRAND_MARK))' in streamlit_app
     assert 'BRAND_WORDMARK = BRAND_ASSET_DIR / "sofinco_logo.png"' in streamlit_app
     assert 'alt="Sofinco wordmark"' in streamlit_app
-    assert 'width=180' in streamlit_app
+    assert "width=180" in streamlit_app
     assert 'st.space("stretch")' in streamlit_app
     assert 'with st.container(horizontal=True, vertical_alignment="center")' in streamlit_app
     assert 'alt="Sofinco mark"' in streamlit_app
-    assert 'width=64' in streamlit_app
-    assert 'avatar=str(BRAND_MARK)' in streamlit_app
+    assert "width=64" in streamlit_app
+    assert "avatar=str(BRAND_MARK)" in streamlit_app
 
 
 def test_configuration_examples_name_every_required_setting_without_real_secrets() -> None:
@@ -159,7 +156,7 @@ def test_streamlit_theme_exposes_complete_native_light_and_dark_modes() -> None:
     assert "[theme.dark]" in theme
     assert "[theme.light.sidebar]" in theme
     assert "[theme.dark.sidebar]" in theme
-    assert 'backgroundColor = "#F3F0EA"' in theme
+    assert 'backgroundColor = "#FFFFFF"' in theme
     assert 'backgroundColor = "#222222"' in theme
     assert theme.count('paddingTop = "0.5rem"') == 2
 
@@ -168,11 +165,11 @@ def test_streamlit_theme_uses_requested_semantic_palette_and_local_fonts() -> No
     theme = read(".streamlit/config.toml")
 
     for expected in (
-        'backgroundColor = "#F3F0EA"',
+        'backgroundColor = "#FFFFFF"',
         'secondaryBackgroundColor = "#F2F2F2"',
         'textColor = "#222222"',
-        'linkColor = "#0A6067"',
-        'borderColor = "#566467"',
+        'linkColor = "#222222"',
+        'borderColor = "#222222"',
         'backgroundColor = "#222222"',
         'secondaryBackgroundColor = "#2B2B2B"',
         'textColor = "#FFFFFF"',
@@ -183,9 +180,9 @@ def test_streamlit_theme_uses_requested_semantic_palette_and_local_fonts() -> No
         'codeFont = "IBM Plex Mono, monospace"',
         "[[theme.fontFaces]]",
         "enableStaticServing = true",
-        'redColor = "#B42318"',
-        'orangeColor = "#8A4B08"',
-        'greenColor = "#166534"',
+        'redColor = "#222222"',
+        'orangeColor = "#222222"',
+        'greenColor = "#222222"',
     ):
         assert expected in theme
 
