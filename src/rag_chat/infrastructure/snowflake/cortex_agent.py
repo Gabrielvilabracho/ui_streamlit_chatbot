@@ -57,7 +57,7 @@ class Viewer:
 
     @property
     def agent(self) -> str:
-        return f"DATALAB.SPAIN.SOFIA_{self.policy}_AGENT"
+        return f"DATALAB.TEST.SOFIA_{self.policy}_AGENT"
 
 
 def _query(

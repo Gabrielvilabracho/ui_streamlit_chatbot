@@ -20,15 +20,15 @@ never falls back to owner execution. Connection failures disable chat.
 
 ## Resource contract
 
-Use `DATALAB.SPAIN` and query warehouse `DEFAULT_WH_XS`. App owner:
-`GG_APP_CC_REC_DATAWARE_DMO`. These proposed names are **not** resources created by
+Use `DATALAB.TEST` and query warehouse `DATALAB_TEST_WH`. App owner:
+`DATALAB_TEST_ADMIN`. These proposed names are **not** resources created by
 the application:
 
 | Viewer default role | Agent | Isolated Search source view |
 | --- | --- | --- |
-| `GG_APP_SOYOU_DATALAB_USER` | `DATALAB.SPAIN.SOFIA_GENERAL_AGENT` | `DATALAB.SPAIN.SOFIA_GENERAL_CHUNKS` |
-| `GG_APP_SOYOU_DATALAB_DPO` | `DATALAB.SPAIN.SOFIA_PRIVACY_AGENT` | `DATALAB.SPAIN.SOFIA_PRIVACY_CHUNKS` |
-| `GG_APP_SP_DATALAB_CREDIT_AFTERSALES` | `DATALAB.SPAIN.SOFIA_CREDIT_AFTERSALES_AGENT` | `DATALAB.SPAIN.SOFIA_CREDIT_AFTERSALES_CHUNKS` |
+| `GG_APP_SOYOU_DATALAB_USER` | `DATALAB.TEST.SOFIA_GENERAL_AGENT` | `DATALAB.TEST.SOFIA_GENERAL_CHUNKS` |
+| `GG_APP_SOYOU_DATALAB_DPO` | `DATALAB.TEST.SOFIA_PRIVACY_AGENT` | `DATALAB.TEST.SOFIA_PRIVACY_CHUNKS` |
+| `GG_APP_SP_DATALAB_CREDIT_AFTERSALES` | `DATALAB.TEST.SOFIA_CREDIT_AFTERSALES_AGENT` | `DATALAB.TEST.SOFIA_CREDIT_AFTERSALES_CHUNKS` |
 
 1. Prepare the [classification and secure views](document-access-policies.md) and
    the approved [initial GENERAL assignment](document-lifecycle.md). Neither has
@@ -61,6 +61,10 @@ The `rag_chat` package must be installed/importable from `src` in the container;
 uploading the entrypoint alone is insufficient. Use the dependencies declared in
 `pyproject.toml`; validate the container's package-repository access and installed
 versions first. This change does not install packages or create a compute pool.
+Create the app in `DATALAB.TEST` with `DATALAB_TEST_ADMIN` as its owner role and
+`DATALAB_TEST_WH` as its query warehouse. Setting a local connection role does not
+transfer ownership of an existing app. The container also requires a compute pool
+with the appropriate grants; the query warehouse does not run the container.
 Select `snowflake_app.py` as the main file. Do not copy local credential files.
 
 The documented minimum for restricted caller's rights is Streamlit 1.53.1. This

@@ -6,7 +6,7 @@ role-isolated. No account resources or permissions have been inspected or change
 
 ## Approved distribution
 
-| Exact role | Policy label | Allowed documents | Source view in `DATALAB.SPAIN` |
+| Exact role | Policy label | Allowed documents | Source view in `DATALAB.TEST` |
 | --- | --- | --- | --- |
 | `GG_APP_SOYOU_DATALAB_USER` | `GENERAL` | Approved general Datalab documentation | `SOFIA_GENERAL_CHUNKS` |
 | `GG_APP_SOYOU_DATALAB_DPO` | `PRIVACY` | Classified privacy, data-protection and compliance documentation | `SOFIA_PRIVACY_CHUNKS` |
@@ -57,14 +57,14 @@ Identify candidate documents without retrieving their contents:
 
 ```sql
 SELECT DOC_ID, FILE_NAME
-FROM DATALAB.SPAIN.RAG_DOCUMENTS
+FROM DATALAB.TEST.RAG_DOCUMENTS
 ORDER BY DOC_ID;
 ```
 
 A document owner must approve the classification from its actual contents and
 governance requirements, not infer it from the filename. Record the approved
 numeric `RAG_DOCUMENTS.DOC_ID` and one exact policy label in
-`DATALAB.SPAIN.SOFIA_DOCUMENT_CLASSIFICATIONS`. Do not copy UUIDs from
+`DATALAB.TEST.SOFIA_DOCUMENT_CLASSIFICATIONS`. Do not copy UUIDs from
 `RAG_DOCUEMNT_REGISTRY`, join that registry by filename, or assign every document
 to `GENERAL` as a fallback. Classification writes are a separate governed action;
 none are performed by the supplied setup.
