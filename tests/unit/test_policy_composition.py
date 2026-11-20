@@ -5,7 +5,7 @@ from types import SimpleNamespace
 from rag_chat import composition
 from rag_chat.application.defaults import BaselineGuardrail
 from rag_chat.application.guardrails import GuardrailPipeline
-from rag_chat.domain.models import GenerationResult, ProgressEvent, TokenUsage
+from rag_chat.domain.models import GenerationResult, ProgressEvent, SourceDocument, TokenUsage
 
 
 def test_composition_wires_registered_hooks_and_guardrails(monkeypatch) -> None:
@@ -14,13 +14,15 @@ def test_composition_wires_registered_hooks_and_guardrails(monkeypatch) -> None:
     monkeypatch.setattr(
         composition,
         "CortexSearchRetriever",
-        lambda **kwargs: SimpleNamespace(retrieve=lambda query, limit: ()),
+        lambda **kwargs: SimpleNamespace(
+            retrieve=lambda query, limit: (SourceDocument("doc", "Evidence", "Policy"),)
+        ),
     )
     monkeypatch.setattr(
         composition,
         "CortexCompleteGenerator",
         lambda **kwargs: SimpleNamespace(
-            generate=lambda **args: GenerationResult("answer", "model", TokenUsage())
+            generate=lambda **args: GenerationResult("answer [1]", "model", TokenUsage())
         ),
     )
     settings = SimpleNamespace(
@@ -28,6 +30,8 @@ def test_composition_wires_registered_hooks_and_guardrails(monkeypatch) -> None:
         id_column="id",
         title_column="title",
         uri_column="uri",
+        account="test",
+        user="composition-viewer",
     )
     calls = []
     registered: list[ProgressEvent] = []
@@ -47,10 +51,10 @@ def test_composition_wires_registered_hooks_and_guardrails(monkeypatch) -> None:
 
     answer = service.answer(question="question", model="model", on_progress=progress.append)
 
-    assert answer.content == "answer"
-    assert calls == [("input", "question"), ("output", "answer")]
+    assert answer.content == "answer [1]"
+    assert calls == [("input", "question"), ("output", "answer [1]")]
     assert registered == progress
     assert len(progress) == 10
-    assert len(diagnostics) == 8
+    assert len(diagnostics) == 12
     default_service = composition.build_orchestrator(settings)
     assert default_service.answer(question="question", model="model").content == answer.content

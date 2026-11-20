@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
+from dataclasses import replace
 from pathlib import Path
 from typing import Any, Literal, cast
 from urllib.parse import urlparse
@@ -10,8 +11,12 @@ from uuid import uuid4
 
 import streamlit as st
 
+from rag_chat.application.guardrails import BaselineGuardrail
+from rag_chat.application.guardrails.privacy import protect_source, protect_text, validate_untrusted
+from rag_chat.application.hooks.diagnostics import DiagnosticDispatcher
+from rag_chat.application.hooks.events import ErrorEvent, GuardrailRejectionEvent
 from rag_chat.application.ports import AnswerService
-from rag_chat.domain.errors import RagError, RagTimeoutError
+from rag_chat.domain.errors import GuardrailViolation, RagError, RagTimeoutError
 from rag_chat.domain.models import (
     ChatMessage,
     OrchestrationStep,
@@ -94,6 +99,16 @@ def run_app(
     )
 
     if prompt and orchestrator_factory:
+        try:
+            BaselineGuardrail().validate_input(prompt)
+            prompt = protect_text(prompt)
+            validate_untrusted(prompt)
+        except GuardrailViolation as error:
+            diagnostics = DiagnosticDispatcher()
+            diagnostics.emit(GuardrailRejectionEvent(OrchestrationStep.VALIDATE_INPUT, error.rule))
+            diagnostics.emit(ErrorEvent(OrchestrationStep.VALIDATE_INPUT, "guardrail"))
+            st.error(str(error), title="Request rejected", icon=":material/shield:")
+            return
         message = user_message(prompt, message_id=_message_id("user"))
         messages = _messages()
         history = conversation_history(messages)
@@ -129,6 +144,22 @@ def _initialize_state(conversation_scope: str | None = None) -> None:
         st.session_state.conversation_scope = conversation_scope
     if "messages" not in st.session_state:
         st.session_state.messages = []
+    # Also protect conversations created before these boundaries were introduced.
+    st.session_state.messages = [_protect_message(message) for message in _messages()]
+
+
+def _protect_message(message: UiMessage) -> UiMessage:
+    try:
+        return replace(
+            message,
+            content=protect_text(message.content),
+            prompt=protect_text(message.prompt) if message.prompt else None,
+            sources=tuple(protect_source(source) for source in message.sources),
+        )
+    except GuardrailViolation:
+        return replace(
+            message, content="Content withheld by the privacy policy.", prompt=None, sources=()
+        )
 
 
 def _render_brand_title() -> None:
@@ -298,6 +329,11 @@ def _generate_answer(
                 model=model,
                 history=history,
                 on_progress=mark_progress,
+            )
+            answer = replace(
+                answer,
+                content=protect_text(answer.content),
+                sources=tuple(protect_source(source) for source in answer.sources),
             )
         except (RagTimeoutError, TimeoutError):
             mark_active_stage_failed()

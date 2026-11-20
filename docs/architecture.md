@@ -125,3 +125,8 @@ Semantic values retain the approved Sof~IA palette reference:
 | Primary text | `#222222` |
 | Neutral/base surfaces | `#F2F2F2`, `#FFFFFF` |
 | Typography | Helvetica Neue, Suisse International, Neue Montreal, Arial, sans-serif |
+
+## Runtime safety policy
+
+See [Runtime guardrails](runtime-guardrails.md) for the enabled application boundaries,
+configuration, accounting, masking policy, and explicit provider-side limitations.

@@ -5,6 +5,7 @@ from pathlib import Path
 
 import streamlit as st
 
+from rag_chat.application.guardrails.runtime import GuardrailSettings, RuntimeGuardrails
 from rag_chat.domain.errors import RagError
 from rag_chat.infrastructure.snowflake.cortex_agent import (
     AGENT_MODEL,
@@ -28,10 +29,11 @@ user_identifier: str | None = None
 access_role: str | None = None
 scope = "container:unavailable"
 try:
+    safety = RuntimeGuardrails(settings=GuardrailSettings.from_environment())
     connection = st.connection("snowflake-callers-rights")
     caller_session = connection.session()
     viewer = identify_viewer(caller_session)
-    factory = partial(CortexAgentService, session=caller_session, viewer=viewer)
+    factory = partial(CortexAgentService, session=caller_session, viewer=viewer, safety=safety)
     user_identifier, access_role = viewer.user, viewer.role
     scope = repr(("container", viewer.user, viewer.role, viewer.agent))
 except RagError as error:

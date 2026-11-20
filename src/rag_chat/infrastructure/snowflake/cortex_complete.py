@@ -38,10 +38,12 @@ class CortexCompleteGenerator:
         session: Any,
         temperature: float = 0.1,
         max_tokens: int = 1_024,
+        require_timeout: bool = False,
     ) -> None:
         self._session = session
         self._temperature = temperature
         self._max_tokens = max_tokens
+        self._require_timeout = require_timeout
 
     @instrument(
         name="sofia.generate",
@@ -60,7 +62,7 @@ class CortexCompleteGenerator:
                 _AI_COMPLETE_SQL,
                 params=[model, prompt, self._temperature, self._max_tokens],
             )
-            rows = _collect_with_timeout(frame, timeout_seconds)
+            rows = _collect_with_timeout(frame, timeout_seconds, required=self._require_timeout)
         except Exception as error:
             translate_timeout(error, operation="AI_COMPLETE request")
             raise
@@ -87,11 +89,15 @@ class CortexCompleteGenerator:
         )
 
 
-def _collect_with_timeout(frame: Any, timeout_seconds: float) -> list[Any]:
+def _collect_with_timeout(
+    frame: Any, timeout_seconds: float, *, required: bool = False
+) -> list[Any]:
     statement_params = {"STATEMENT_TIMEOUT_IN_SECONDS": str(max(1, math.ceil(timeout_seconds)))}
     try:
         return list(frame.collect(statement_params=statement_params))
     except TypeError:
+        if required:
+            raise
         return list(frame.collect())
 
 
