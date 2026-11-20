@@ -1,0 +1,45 @@
+name: Change request
+description: Request an application, configuration, documentation, or user-interface change.
+title: "[Change]: "
+labels:
+  - type:chore
+body:
+  - type: textarea
+    id: requested-change
+    attributes:
+      label: Requested change
+      description: Describe the desired outcome and the current behavior it replaces.
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: Explain why the change is needed.
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope and constraints
+      description: Identify the affected areas, preserved behavior, and exclusions.
+    validations:
+      required: true
+
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation evidence
+      description: Report observed checks and distinguish pending or unavailable proof.
+    validations:
+      required: true
+
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks and rollback
+      description: Describe the risks and how the change can be reverted.
+    validations:
+      required: true
