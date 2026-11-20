@@ -123,15 +123,80 @@ def test_agent_uses_configured_hooks_without_retaining_request_callbacks() -> No
     first: list[ProgressEvent] = []
     second: list[ProgressEvent] = []
     hooks = [registered.append]
-    service = CortexAgentService(
-        session=session, viewer=identify_viewer(session), hooks=hooks
-    )
+    service = CortexAgentService(session=session, viewer=identify_viewer(session), hooks=hooks)
     hooks.clear()
     for callback in (first.append, second.append):
         service.answer(question="Question", model=AGENT_MODEL, on_progress=callback)
     assert len(first) == 2
     assert first == second
     assert registered == first + second
+
+
+def test_agent_diagnostics_report_cited_sources_and_unknown_tokens_without_ui_changes() -> None:
+    from rag_chat.application.hooks import SourcesEvent, TimingEvent, TokenUsageEvent
+
+    session = FakeSession()
+    events = []
+    progress = []
+    service = CortexAgentService(
+        session=session, viewer=identify_viewer(session), diagnostic_hooks=(events.append,)
+    )
+    service.answer(question="Question", model=AGENT_MODEL, on_progress=progress.append)
+    assert SourcesEvent(1, "cited") in events
+    assert TokenUsageEvent(None) in events
+    assert len(progress) == 2
+    assert len([event for event in events if isinstance(event, TimingEvent)]) == 6
+
+
+def test_agent_output_rejection_emits_one_error_and_rejection_with_available_usage() -> None:
+    from rag_chat.application.guardrails import BaselineGuardrail
+    from rag_chat.application.hooks import ErrorEvent, GuardrailRejectionEvent, TokenUsageEvent
+    from rag_chat.domain.errors import GuardrailRule
+    from rag_chat.domain.models import OrchestrationStep, TokenUsage
+
+    session = FakeSession()
+    session.payload["metadata"] = {
+        "usage": {
+            "tokens_consumed": [{"input_tokens": {"total": 3}, "output_tokens": {"total": 1}}]
+        }
+    }
+    events = []
+    progress = []
+    service = CortexAgentService(
+        session=session,
+        viewer=identify_viewer(session),
+        diagnostic_hooks=(events.append,),
+        guardrail=BaselineGuardrail(max_output_characters=1),
+    )
+    with pytest.raises(GuardrailViolation, match="response exceeded"):
+        service.answer(question="Question", model=AGENT_MODEL, on_progress=progress.append)
+    assert TokenUsageEvent(TokenUsage(3, 1)) in events
+    assert [event for event in events if isinstance(event, GuardrailRejectionEvent)] == [
+        GuardrailRejectionEvent(
+            OrchestrationStep.VALIDATE_OUTPUT, GuardrailRule.OUTPUT_MAX_CHARACTERS
+        )
+    ]
+    assert [event for event in events if isinstance(event, ErrorEvent)] == [
+        ErrorEvent(OrchestrationStep.VALIDATE_OUTPUT, "guardrail")
+    ]
+    assert [event.state for event in progress] == [ProgressState.STARTED]
+
+
+def test_agent_diagnostics_report_identity_failure_before_generation() -> None:
+    from rag_chat.application.hooks import ErrorEvent
+
+    session = FakeSession()
+    events = []
+    service = CortexAgentService(
+        session=session, viewer=identify_viewer(session), diagnostic_hooks=(events.append,)
+    )
+    session.role = "ACCOUNTADMIN"
+    with pytest.raises(ConfigurationError):
+        service.answer(question="Question", model=AGENT_MODEL)
+    assert [event for event in events if isinstance(event, ErrorEvent)] == [
+        ErrorEvent("Verify identity", "configuration")
+    ]
+    assert all("DATA_AGENT_RUN" not in sql for sql, _ in session.calls)
 
 
 def test_agent_uses_injected_guardrails_at_input_and_output_boundaries() -> None:
@@ -168,9 +233,7 @@ def test_custom_pipeline_cannot_bypass_agent_access_controls(denied: str) -> Non
     elif denied == "identity":
         session.role = "GG_APP_SOYOU_DATALAB_DPO"
     with pytest.raises(ConfigurationError):
-        service.answer(
-            question="Question", model="override" if denied == "model" else AGENT_MODEL
-        )
+        service.answer(question="Question", model="override" if denied == "model" else AGENT_MODEL)
     assert all("DATA_AGENT_RUN" not in sql for sql, _ in session.calls)
     assert not events
 

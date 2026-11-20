@@ -63,6 +63,26 @@ New adapters should translate provider exceptions into domain-safe errors at the
 
 Configured hooks run in registration order, followed by the optional per-request `on_progress` callback. Request callbacks are never registered permanently, including when a service is cached. Hook exceptions propagate; hooks do not silently swallow failures. Register only callbacks safe for the service's lifetime, not user-specific UI state. The agent path still reports only its actual generation stage, not local retrieval steps it cannot observe.
 
+#### Diagnostic hooks
+
+Both services and `build_orchestrator` also accept `diagnostic_hooks=(callback, ...)`. These callbacks consume the separate immutable `DiagnosticEvent` union exported from `application.hooks`; they never send diagnostic events to the UI's existing `on_progress` callback.
+
+| Event | Meaning |
+| --- | --- |
+| `ErrorEvent` | The failing stage and an allowlisted category: guardrail, timeout, configuration, provider, or unexpected; no exception text or exception object |
+| `TimingEvent` | Monotonic elapsed milliseconds and success/failure for an executed stage; `stage=None` represents the full request, including nested stages |
+| `TokenUsageEvent` | Provider-reported input/output counts; `usage=None` means unavailable, while explicit zero counts remain valid reported usage |
+| `SourcesEvent` | Local RAG reports the number of retrieved chunks (`kind="retrieved"`); Cortex Agent reports distinct returned citations (`kind="cited"`), not its hidden internal retrieval count |
+| `GuardrailRejectionEvent` | The validation stage and stable baseline rule ID; a custom validator without a known rule uses `custom` |
+
+The baseline rule IDs are `input.empty`, `input.max_characters`, `output.empty`, and `output.max_characters`. Rejections preserve their original exception type and message. No exception-message matching is used to infer a rule or a provider-side rejection.
+
+Diagnostics are request-local. A nested failure emits one error/rejection at its innermost observed stage; every executed enclosing stage still reports a failed duration. Stages that never run produce no timings. Existing progress event order and callback-failure propagation stay unchanged. Service constructors accept a separate `hook_clock` for deterministic timing tests without consuming the existing answer-latency clock.
+
+The default diagnostic callback is `application.hooks.logging.log_diagnostic_event`, using the standard `rag_chat.hooks` logger at `INFO`. Configure that logger's level and handlers in the host runtime to collect these records. It logs only stage/category/rule identifiers, durations, counts, availability, and outcomes: never prompts, answers, source IDs/content, user identity, credentials, or raw exception messages. `GenerationResult.usage_reported` preserves availability from the COMPLETE response without changing its existing token-count conversion or answer/UI behavior.
+
+Passing `diagnostic_hooks` replaces the default callback tuple; include `log_diagnostic_event` if logging should continue alongside a custom exporter, or pass `()` to disable diagnostics export. Unlike legacy progress callbacks, diagnostic exporter failures are isolated so they cannot replace a rejection, cause a provider retry, or turn a successful request into a failure. A fixed `diagnostic_hook_failed` warning contains no exporter error details.
+
 ### Shared guardrails
 
 `src/rag_chat/application/guardrails/` groups reusable validation:

@@ -32,7 +32,13 @@ SELECT TO_JSON(
 
 
 class CortexCompleteGenerator:
-    def __init__(self, *, session: Any, temperature: float = 0.1, max_tokens: int = 1_024) -> None:
+    def __init__(
+        self,
+        *,
+        session: Any,
+        temperature: float = 0.1,
+        max_tokens: int = 1_024,
+    ) -> None:
         self._session = session
         self._temperature = temperature
         self._max_tokens = max_tokens
@@ -74,13 +80,15 @@ class CortexCompleteGenerator:
                 prompt_tokens=_integer(usage.get("prompt_tokens")),
                 completion_tokens=_integer(usage.get("completion_tokens")),
             ),
+            usage_reported=all(
+                type(usage.get(key)) is int and usage[key] >= 0
+                for key in ("prompt_tokens", "completion_tokens")
+            ),
         )
 
 
 def _collect_with_timeout(frame: Any, timeout_seconds: float) -> list[Any]:
-    statement_params = {
-        "STATEMENT_TIMEOUT_IN_SECONDS": str(max(1, math.ceil(timeout_seconds)))
-    }
+    statement_params = {"STATEMENT_TIMEOUT_IN_SECONDS": str(max(1, math.ceil(timeout_seconds)))}
     try:
         return list(frame.collect(statement_params=statement_params))
     except TypeError:

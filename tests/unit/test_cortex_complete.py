@@ -71,3 +71,29 @@ def test_generator_translates_provider_timeout() -> None:
 
     with pytest.raises(RagTimeoutError, match="timed out"):
         generator.generate(model="llama3.3-70b", prompt="Question", timeout_seconds=1.0)
+
+
+@pytest.mark.parametrize(
+    "usage,reported",
+    [
+        ({}, False),
+        ({"prompt_tokens": 2}, False),
+        ({"prompt_tokens": "2", "completion_tokens": 1}, False),
+        ({"prompt_tokens": True, "completion_tokens": 1}, False),
+        ({"prompt_tokens": 0, "completion_tokens": 0}, True),
+        ({"prompt_tokens": 2, "completion_tokens": 1}, True),
+    ],
+)
+def test_generator_distinguishes_absent_usage_from_reported_zero(usage, reported) -> None:
+    generator = CortexCompleteGenerator(
+        session=FakeSession(
+            json.dumps(
+                {
+                    "choices": [{"messages": "answer"}],
+                    "usage": usage,
+                }
+            )
+        )
+    )
+    result = generator.generate(model="model", prompt="question", timeout_seconds=1)
+    assert result.usage_reported is reported
