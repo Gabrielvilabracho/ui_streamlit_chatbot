@@ -5,6 +5,7 @@ from __future__ import annotations
 import time
 from collections.abc import Callable, Sequence
 
+from rag_chat.application.hooks import HookDispatcher, ProgressHook
 from rag_chat.application.ports import Generator, Guardrail, Retriever, Telemetry
 from rag_chat.domain.errors import RagTimeoutError
 from rag_chat.domain.models import (
@@ -30,6 +31,7 @@ class RagOrchestrator:
         retrieval_limit: int = 5,
         timeout_seconds: float = 30.0,
         clock: Callable[[], float] = time.perf_counter,
+        hooks: Sequence[ProgressHook] = (),
     ) -> None:
         self._retriever = retriever
         self._generator = generator
@@ -38,6 +40,7 @@ class RagOrchestrator:
         self._retrieval_limit = retrieval_limit
         self._timeout_seconds = timeout_seconds
         self._clock = clock
+        self._hooks = HookDispatcher(hooks=tuple(hooks))
 
     def answer(
         self,
@@ -52,8 +55,7 @@ class RagOrchestrator:
         started_at = self._clock()
 
         def mark(step: OrchestrationStep, state: ProgressState) -> None:
-            if on_progress:
-                on_progress(ProgressEvent(step=step, state=state))
+            self._hooks.emit(ProgressEvent(step=step, state=state), on_progress=on_progress)
 
         try:
             mark(OrchestrationStep.VALIDATE_INPUT, ProgressState.STARTED)

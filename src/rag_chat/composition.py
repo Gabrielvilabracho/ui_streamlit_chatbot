@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from typing import Any
 
-from rag_chat.application.defaults import BaselineGuardrail, LoggingTelemetry
+from rag_chat.application.defaults import LoggingTelemetry
+from rag_chat.application.guardrails import BaselineGuardrail
+from rag_chat.application.hooks import ProgressHook
 from rag_chat.application.orchestrator import RagOrchestrator
-from rag_chat.application.ports import AnswerService
+from rag_chat.application.ports import AnswerService, Guardrail
 from rag_chat.infrastructure.snowflake.cortex_complete import CortexCompleteGenerator
 from rag_chat.infrastructure.snowflake.cortex_search import CortexSearchRetriever
 from rag_chat.infrastructure.snowflake.session import (
@@ -25,6 +27,9 @@ logger = logging.getLogger(__name__)
 def build_orchestrator(
     settings: SnowflakeSettings,
     observability_settings: ObservabilitySettings | None = None,
+    *,
+    hooks: Sequence[ProgressHook] = (),
+    guardrail: Guardrail | None = None,
 ) -> AnswerService:
     """Construct the concrete runtime at the application's outermost boundary."""
 
@@ -39,8 +44,9 @@ def build_orchestrator(
             uri_column=settings.uri_column,
         ),
         generator=CortexCompleteGenerator(session=session),
-        guardrail=BaselineGuardrail(),
+        guardrail=guardrail if guardrail is not None else BaselineGuardrail(),
         telemetry=LoggingTelemetry(),
+        hooks=hooks,
     )
     return with_observability(
         service=orchestrator,

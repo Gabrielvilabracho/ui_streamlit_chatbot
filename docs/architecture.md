@@ -28,7 +28,7 @@ RagOrchestrator ──► Guardrail.validate_input
               RagAnswer + sources + usage + latency
 ```
 
-Every completed orchestration step is emitted through a callback. The Streamlit adapter renders those events as disabled `st.checkbox` items inside `st.status`.
+Each orchestration step emits its existing start/completion events through the shared hook dispatcher. The Streamlit adapter consumes the request's `on_progress` callback to present progress.
 
 ## Dependency rule
 
@@ -56,6 +56,33 @@ The ports in `src/rag_chat/application/ports.py` are the stable injection seams:
 - `Telemetry`: emit OpenTelemetry spans, Snowflake event records, or vendor metrics.
 
 New adapters should translate provider exceptions into domain-safe errors at the infrastructure boundary.
+
+### Shared hooks
+
+`src/rag_chat/application/hooks/` owns the progress callback contract (`progress.py`) and ordered dispatch (`dispatcher.py`). Register reusable callbacks with `hooks=(callback, ...)` when constructing `RagOrchestrator` or `CortexAgentService`; `build_orchestrator` forwards the same option. Both services use this dispatcher at their existing event points, reusing the domain's `ProgressEvent`.
+
+Configured hooks run in registration order, followed by the optional per-request `on_progress` callback. Request callbacks are never registered permanently, including when a service is cached. Hook exceptions propagate; hooks do not silently swallow failures. Register only callbacks safe for the service's lifetime, not user-specific UI state. The agent path still reports only its actual generation stage, not local retrieval steps it cannot observe.
+
+### Shared guardrails
+
+`src/rag_chat/application/guardrails/` groups reusable validation:
+
+- `input.py`: reject empty questions or questions exceeding 8,000 trimmed characters.
+- `output.py`: reject empty responses or responses exceeding 32,000 trimmed characters.
+- `pipeline.py`: run configured input/output rules in order, stopping at the first rejection; `BaselineGuardrail` composes the existing default checks.
+
+Both service paths keep the baseline enabled by default. The old `application.defaults.BaselineGuardrail` import remains available. Supply a custom `Guardrail` through `guardrail=` to either service or `build_orchestrator`; `GuardrailPipeline` accepts separate tuples of input/output validator callables. A custom pipeline replaces the baseline, so include its validators explicitly when extending it:
+
+```python
+from rag_chat.application.guardrails import GuardrailPipeline, InputGuardrail, OutputGuardrail
+
+guardrail = GuardrailPipeline(
+    input_rules=(InputGuardrail().validate,),
+    output_rules=(OutputGuardrail().validate,),
+)
+```
+
+These are structural checks, not PII or prompt-injection detection. Snowflake identity, approved-role, provider-payload, and citation checks stay in `infrastructure/snowflake/cortex_agent.py`; general guardrails never replace those controls.
 
 ## Streamlit state
 

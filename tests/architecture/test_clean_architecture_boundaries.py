@@ -20,8 +20,8 @@ def imported_roots(path: Path) -> set[str]:
 
 def test_domain_and_application_do_not_import_outer_frameworks() -> None:
     protected_files = [
-        *sorted((SRC_ROOT / "domain").glob("*.py")),
-        *sorted((SRC_ROOT / "application").glob("*.py")),
+        *sorted((SRC_ROOT / "domain").rglob("*.py")),
+        *sorted((SRC_ROOT / "application").rglob("*.py")),
     ]
 
     assert protected_files, "Expected domain and application modules to exist"
