@@ -66,11 +66,13 @@ def test_viewer_uses_exact_approved_policy(role: str, policy: str) -> None:
     session = FakeSession(role=role)
     viewer = identify_viewer(session)
     assert (viewer.user, viewer.role, viewer.policy) == ("viewer", role, policy)
-    assert viewer.agent == f"DATALAB.SPAIN.SOFIA_{policy}_AGENT"
+    assert viewer.agent == f"DATALAB.TEST.SOFIA_{policy}_AGENT"
     assert session.calls[0][0] == "USE SECONDARY ROLES NONE"
 
 
-@pytest.mark.parametrize("role", ["ACCOUNTADMIN", "AGENT_STUDIO_USER", "", "general"])
+@pytest.mark.parametrize(
+    "role", ["ACCOUNTADMIN", "AGENT_STUDIO_USER", "DATALAB_TEST_ADMIN", "", "general"]
+)
 def test_unknown_role_is_denied_without_agent_call(role: str) -> None:
     session = FakeSession(role=role)
     with pytest.raises(ConfigurationError, match="approved document policy"):
@@ -88,7 +90,7 @@ def test_agent_preserves_history_citations_and_truthful_progress() -> None:
     )
     query, params = session.calls[-1]
     assert "SNOWFLAKE.CORTEX.DATA_AGENT_RUN(?, ?)" in query
-    assert params[0] == "DATALAB.SPAIN.SOFIA_GENERAL_AGENT"
+    assert params[0] == "DATALAB.TEST.SOFIA_GENERAL_AGENT"
     request = json.loads(params[1])
     assert request == {
         "messages": [

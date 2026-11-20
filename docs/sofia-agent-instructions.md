@@ -27,7 +27,7 @@ agent does not update the local direct-RAG path.
 
 Use the same two instruction blocks, but retain separate tools and Snowflake grants:
 
-| Viewer default role | Agent in `DATALAB.SPAIN` | Allowed indexed source view |
+| Viewer default role | Agent in `DATALAB.TEST` | Allowed indexed source view |
 | --- | --- | --- |
 | `GG_APP_SOYOU_DATALAB_USER` | `SOFIA_GENERAL_AGENT` | `SOFIA_GENERAL_CHUNKS` |
 | `GG_APP_SOYOU_DATALAB_DPO` | `SOFIA_PRIVACY_AGENT` | `SOFIA_PRIVACY_CHUNKS` |

@@ -58,13 +58,13 @@ def corpus() -> Iterator[sqlite3.Connection]:
 def install_views(connection: sqlite3.Connection) -> None:
     """Run the actual portable view bodies; SQLite cannot test Snowflake RBAC."""
     definitions = re.findall(
-        r"CREATE SECURE VIEW DATALAB\.SPAIN\.(\w+)\s+AS\s+(.*?);",
+        r"CREATE SECURE VIEW DATALAB\.TEST\.(\w+)\s+AS\s+(.*?);",
         POLICY_SQL.read_text(),
         flags=re.DOTALL | re.IGNORECASE,
     )
     assert len(definitions) == 3
     for name, query in definitions:
-        local_query = query.replace("DATALAB.SPAIN.", "")
+        local_query = query.replace("DATALAB.TEST.", "")
         connection.execute(f"CREATE VIEW {name} AS {local_query}")
 
 
@@ -103,13 +103,13 @@ def test_grants_are_limited_to_the_matching_consumer_view() -> None:
         " ".join(statement.split()) for statement in statements.split(";") if statement.strip()
     }
     assert grants == {
-        f"GRANT SELECT ON VIEW DATALAB.SPAIN.{view} TO ROLE {role}" for _, view, role, _ in POLICIES
+        f"GRANT SELECT ON VIEW DATALAB.TEST.{view} TO ROLE {role}" for _, view, role, _ in POLICIES
     }
 
 
 def test_policy_setup_neither_replaces_objects_nor_assigns_real_documents() -> None:
     sql = re.sub(r"--[^\n]*", "", POLICY_SQL.read_text()).upper()
-    assert "CREATE TABLE DATALAB.SPAIN.SOFIA_DOCUMENT_CLASSIFICATIONS" in sql
+    assert "CREATE TABLE DATALAB.TEST.SOFIA_DOCUMENT_CLASSIFICATIONS" in sql
     assert not re.search(r"\b(REPLACE|INSERT|UPDATE|DELETE|DROP|TRUNCATE|MERGE)\b", sql)
     assert "CURRENT_ROLE" not in sql
     assert "RAG_DOCUEMNT_REGISTRY" not in sql
@@ -126,11 +126,11 @@ def run_initial_general_queries(connection: sqlite3.Connection) -> None:
     assert "BEGIN TRANSACTION;" in sql and "COMMIT;" in sql
     assert re.search(r"WHEN OTHER THEN\s+ROLLBACK;\s+RAISE;", sql)
     conflict_count = connection.execute(
-        ("SELECT COUNT(*) " + guard.group(1)).replace("DATALAB.SPAIN.", "")
+        ("SELECT COUNT(*) " + guard.group(1)).replace("DATALAB.TEST.", "")
     ).fetchone()[0]
     if conflict_count:
         raise ValueError("Existing classifications require review")
-    connection.execute(insert.group().replace("DATALAB.SPAIN.", ""))
+    connection.execute(insert.group().replace("DATALAB.TEST.", ""))
 
 
 def test_initial_general_assignment_is_complete_and_rerunnable(
@@ -176,14 +176,14 @@ def test_initial_general_rejects_conflicts_without_partial_assignment(
 def new_document_assignment_query() -> str:
     """Keep the runbook's operator-facing SQL example under regression coverage."""
     match = re.search(
-        r"INSERT INTO DATALAB\.SPAIN\.SOFIA_DOCUMENT_CLASSIFICATIONS .*?;",
+        r"INSERT INTO DATALAB\.TEST\.SOFIA_DOCUMENT_CLASSIFICATIONS .*?;",
         LIFECYCLE_GUIDE.read_text(),
         re.S,
     )
     assert match is not None
     return (
         match.group()
-        .replace("DATALAB.SPAIN.", "")
+        .replace("DATALAB.TEST.", "")
         .replace("$document_id", ":document_id")
         .replace("$access_policy", ":access_policy")
     )
@@ -210,3 +210,9 @@ def test_guide_rejects_missing_invalid_or_existing_assignments_without_mutation(
     )
     assert result.rowcount == 0
     assert tuple(corpus.iterdump()) == before
+
+
+@pytest.mark.parametrize("resource", ["DATALAB_TEST_WH", "DATALAB_TEST_ADMIN"])
+def test_container_resource_contract_uses_test_environment(resource: str) -> None:
+    guide = (ROOT / "docs" / "snowflake-container.md").read_text()
+    assert f"`{resource}`" in guide

@@ -2,7 +2,7 @@
 
 Use this runbook to configure, observe, and troubleshoot the application without exposing credentials or prompt content.
 
-For the planned `DATALAB.SPAIN` container deployment, use the
+For the planned `DATALAB.TEST` container deployment, use the
 [document lifecycle guide](document-lifecycle.md) to add, categorize and update
 documents, and the [policy guide](document-access-policies.md) for role isolation.
 The [container integration guide](snowflake-container.md) covers `snowflake_app.py`,

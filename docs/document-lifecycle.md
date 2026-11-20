@@ -1,13 +1,13 @@
 # Add, categorize and update documents
 
-Use this guide for the planned `DATALAB.SPAIN` deployment. **The app migration is
+Use this guide for the planned `DATALAB.TEST` deployment. **The app migration is
 not deployed, and this repository does not implement the existing PDF ingestion
 pipeline.** Uploading a file does not parse, categorize, index or publish it.
 
 ## Current decision: existing documents are GENERAL
 
 The approved initial category is `GENERAL` for documents currently in
-`DATALAB.SPAIN.RAG_DOCUMENTS`. This applies to parsed documents, not every file
+`DATALAB.TEST.RAG_DOCUMENTS`. This applies to parsed documents, not every file
 registered in the stage, and is not automatic approval of future uploads.
 Under the approved role matrix, `GENERAL` is available to
 `GG_APP_SOYOU_DATALAB_USER`; it is not inherited by the DPO or credit/aftersales
@@ -27,7 +27,7 @@ An authorized administrator performs these steps; the app does not run them:
 
    ```sql
    SELECT DOC_ID, FILE_NAME
-   FROM DATALAB.SPAIN.RAG_DOCUMENTS
+   FROM DATALAB.TEST.RAG_DOCUMENTS
    ORDER BY DOC_ID;
    ```
 
@@ -52,7 +52,7 @@ local tests exercise the query bodies, not the Snowflake runtime.
 
 | Step | Location | Completion evidence |
 | --- | --- | --- |
-| Upload | `DATALAB.SPAIN.gabriel_test_pdf_docs_stage` | Reviewed file exists at its exact stage path |
+| Upload | `DATALAB.TEST.gabriel_test_pdf_docs_stage` | Reviewed file exists at its exact stage path |
 | Register | `RAG_DOCUEMNT_REGISTRY` | Approved loader recorded the file; this alone does not mean parsed |
 | Parse | `RAG_DOCUMENTS` | Numeric `DOC_ID`, expected file/version and usable `RAW_TEXT` |
 | Chunk/embed | `RAG_CHUNKS` | Complete chunks refer to that same numeric `DOC_ID` |
@@ -113,13 +113,13 @@ process; do not treat query history as a complete approval record.
 SET document_id = <numeric_DOC_ID>;
 SET access_policy = 'GENERAL'; -- Or PRIVACY / CREDIT_AFTERSALES after approval.
 
-INSERT INTO DATALAB.SPAIN.SOFIA_DOCUMENT_CLASSIFICATIONS (DOC_ID, ACCESS_POLICY)
+INSERT INTO DATALAB.TEST.SOFIA_DOCUMENT_CLASSIFICATIONS (DOC_ID, ACCESS_POLICY)
 SELECT DISTINCT d.DOC_ID, $access_policy
-FROM DATALAB.SPAIN.RAG_DOCUMENTS d
+FROM DATALAB.TEST.RAG_DOCUMENTS d
 WHERE d.DOC_ID = $document_id
   AND $access_policy IN ('GENERAL', 'PRIVACY', 'CREDIT_AFTERSALES')
   AND NOT EXISTS (
-    SELECT 1 FROM DATALAB.SPAIN.SOFIA_DOCUMENT_CLASSIFICATIONS p
+    SELECT 1 FROM DATALAB.TEST.SOFIA_DOCUMENT_CLASSIFICATIONS p
     WHERE p.DOC_ID = d.DOC_ID
   );
 ```
@@ -175,16 +175,16 @@ access merely because a view count changed or a refresh interval elapsed.
 
 ```sql
 SELECT d.DOC_ID, d.FILE_NAME, p.ACCESS_POLICY
-FROM DATALAB.SPAIN.RAG_DOCUMENTS d
-LEFT JOIN DATALAB.SPAIN.SOFIA_DOCUMENT_CLASSIFICATIONS p ON p.DOC_ID = d.DOC_ID
+FROM DATALAB.TEST.RAG_DOCUMENTS d
+LEFT JOIN DATALAB.TEST.SOFIA_DOCUMENT_CLASSIFICATIONS p ON p.DOC_ID = d.DOC_ID
 ORDER BY d.DOC_ID;
 
 SELECT DOC_ID, COUNT(*) AS CHUNK_COUNT
-FROM DATALAB.SPAIN.RAG_CHUNKS
+FROM DATALAB.TEST.RAG_CHUNKS
 GROUP BY DOC_ID ORDER BY DOC_ID;
 
 SELECT ACCESS_POLICY, COUNT(*) AS ASSIGNMENT_COUNT
-FROM DATALAB.SPAIN.SOFIA_DOCUMENT_CLASSIFICATIONS
+FROM DATALAB.TEST.SOFIA_DOCUMENT_CLASSIFICATIONS
 GROUP BY ACCESS_POLICY;
 ```
 
