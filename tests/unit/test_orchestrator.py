@@ -160,3 +160,26 @@ def test_orchestrator_translates_timeout_and_records_failure() -> None:
         step=OrchestrationStep.GENERATE_ANSWER,
         state=ProgressState.STARTED,
     )
+
+
+def test_configured_hooks_receive_same_events_as_each_request_callback() -> None:
+    registered: list[ProgressEvent] = []
+    first: list[ProgressEvent] = []
+    second: list[ProgressEvent] = []
+    hooks = [registered.append]
+    service = RagOrchestrator(
+        retriever=StubRetriever(()),
+        generator=StubGenerator(result=GenerationResult("Answer", "llama3.3-70b", TokenUsage())),
+        guardrail=RecordingGuardrail(),
+        telemetry=RecordingTelemetry(),
+        retrieval_limit=4,
+        hooks=hooks,
+    )
+    hooks.clear()
+    for callback in (first.append, second.append):
+        service.answer(
+            question="How do I close the books?", model="llama3.3-70b", on_progress=callback
+        )
+    assert first == second
+    assert len(first) == 10
+    assert registered == first + second

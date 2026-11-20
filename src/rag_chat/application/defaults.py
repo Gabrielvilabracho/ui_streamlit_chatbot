@@ -3,32 +3,9 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
 
-from rag_chat.domain.errors import GuardrailViolation
+from rag_chat.application.guardrails import BaselineGuardrail as BaselineGuardrail
 from rag_chat.domain.models import RagAnswer
-
-
-@dataclass(frozen=True, slots=True)
-class BaselineGuardrail:
-    """Reject empty or excessively large values before provider calls."""
-
-    max_input_characters: int = 8_000
-    max_output_characters: int = 32_000
-
-    def validate_input(self, value: str) -> None:
-        normalized = value.strip()
-        if not normalized:
-            raise GuardrailViolation("The question cannot be empty.")
-        if len(normalized) > self.max_input_characters:
-            raise GuardrailViolation("The question is too long to process safely.")
-
-    def validate_output(self, value: str) -> None:
-        normalized = value.strip()
-        if not normalized:
-            raise GuardrailViolation("The model returned an empty response.")
-        if len(normalized) > self.max_output_characters:
-            raise GuardrailViolation("The model response exceeded the safe output limit.")
 
 
 class LoggingTelemetry:

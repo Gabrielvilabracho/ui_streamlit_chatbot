@@ -5,8 +5,8 @@ from typing import Any
 
 import pytest
 
-from rag_chat.domain.errors import ConfigurationError, ProviderResponseError
-from rag_chat.domain.models import ChatMessage, ProgressState
+from rag_chat.domain.errors import ConfigurationError, GuardrailViolation, ProviderResponseError
+from rag_chat.domain.models import ChatMessage, ProgressEvent, ProgressState
 from rag_chat.infrastructure.snowflake.cortex_agent import (
     AGENT_MODEL,
     CortexAgentService,
@@ -115,6 +115,64 @@ def test_retry_does_not_duplicate_last_user_question() -> None:
         question="Question", model=AGENT_MODEL, history=(ChatMessage("user", "Question"),)
     )
     assert len(json.loads(session.calls[-1][1][1])["messages"]) == 1
+
+
+def test_agent_uses_configured_hooks_without_retaining_request_callbacks() -> None:
+    session = FakeSession()
+    registered: list[ProgressEvent] = []
+    first: list[ProgressEvent] = []
+    second: list[ProgressEvent] = []
+    hooks = [registered.append]
+    service = CortexAgentService(
+        session=session, viewer=identify_viewer(session), hooks=hooks
+    )
+    hooks.clear()
+    for callback in (first.append, second.append):
+        service.answer(question="Question", model=AGENT_MODEL, on_progress=callback)
+    assert len(first) == 2
+    assert first == second
+    assert registered == first + second
+
+
+def test_agent_uses_injected_guardrails_at_input_and_output_boundaries() -> None:
+    from rag_chat.application.guardrails import BaselineGuardrail
+
+    session = FakeSession()
+    service = CortexAgentService(
+        session=session,
+        viewer=identify_viewer(session),
+        guardrail=BaselineGuardrail(max_input_characters=2, max_output_characters=2),
+    )
+    with pytest.raises(GuardrailViolation, match="question is too long"):
+        service.answer(question="long", model=AGENT_MODEL)
+    assert all("DATA_AGENT_RUN" not in sql for sql, _ in session.calls)
+    with pytest.raises(GuardrailViolation, match="response exceeded"):
+        service.answer(question="ok", model=AGENT_MODEL)
+    assert sum("DATA_AGENT_RUN" in sql for sql, _ in session.calls) == 1
+
+
+@pytest.mark.parametrize("denied", ["model", "role", "identity"])
+def test_custom_pipeline_cannot_bypass_agent_access_controls(denied: str) -> None:
+    from rag_chat.application.guardrails import GuardrailPipeline
+
+    session = FakeSession()
+    events: list[ProgressEvent] = []
+    service = CortexAgentService(
+        session=session,
+        viewer=identify_viewer(session),
+        guardrail=GuardrailPipeline(input_rules=(), output_rules=()),
+        hooks=(events.append,),
+    )
+    if denied == "role":
+        session.role = "ACCOUNTADMIN"
+    elif denied == "identity":
+        session.role = "GG_APP_SOYOU_DATALAB_DPO"
+    with pytest.raises(ConfigurationError):
+        service.answer(
+            question="Question", model="override" if denied == "model" else AGENT_MODEL
+        )
+    assert all("DATA_AGENT_RUN" not in sql for sql, _ in session.calls)
+    assert not events
 
 
 def test_identity_change_and_model_override_reject_before_agent_call() -> None:
