@@ -40,7 +40,7 @@ Environment variables and Streamlit secrets use the same field names shown in th
 configuration files. The named table must exist before applying Phase 3 of the grant template.
 
 ```bash
-export TRULENS_EVAL_DATASET="AGENT_PLATFORM.EVALUATIONS.EVALUATION_CASES"
+export TRULENS_EVAL_DATASET="DATALAB.TEST.SOFIA_EVALUATION_CASES"
 export TRULENS_EVAL_RUN="release-2026-11-17"
 export TRULENS_EVAL_JUDGE_MODEL="replace-with-enabled-cortex-model"
 export TRULENS_EVAL_INPUT_COLUMN="QUESTION"

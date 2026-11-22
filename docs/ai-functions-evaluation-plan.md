@@ -23,10 +23,10 @@ The current implementation is traditional RAG. It is not GraphRAG and does not i
 ## Phase 1: build the evaluation foundation
 
 The local setup script is [`sql/evaluation_foundation.sql`](../sql/evaluation_foundation.sql).
-It creates the empty `AGENT_PLATFORM.EVALUATIONS` tables only; it does not load questions,
+It creates the empty `DATALAB.TEST` tables only; it does not load questions,
 grant execution access, or schedule a Task.
 
-Create these Snowflake-owned datasets under `AGENT_PLATFORM.EVALUATIONS`:
+Create these Snowflake-owned datasets under `DATALAB.TEST`:
 
 | Dataset | Purpose | Minimum fields |
 | --- | --- | --- |

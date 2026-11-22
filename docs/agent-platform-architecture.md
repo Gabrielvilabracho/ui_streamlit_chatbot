@@ -131,8 +131,8 @@ tools:
     allowed_services:
       - DATALAB.TEST.SOFIA_GENERAL_SEARCH
     inaccessible_tool_behavior: reject
-evaluation:
-  dataset: AGENT_PLATFORM.EVALUATIONS.EVALUATION_CASES
+  evaluation:
+    dataset: DATALAB.TEST.SOFIA_EVALUATION_CASES
   policy: GENERAL
   threshold_set: sofia-knowledge-assistant-v1
 release:
@@ -210,7 +210,7 @@ Build the new repository in this order:
 2. Implement the local generator and its validation tests; prove that two clean builds produce the
    same artifact hash.
 3. Add `dev` and `test` deployment templates with placeholder identifiers, not production grants.
-4. Connect the repository to the `AGENT_PLATFORM.EVALUATIONS` foundation and add approved test
+4. Connect the repository to the `DATALAB.TEST` evaluation foundation and add approved test
    cases for the General policy.
 5. Deploy one `STAGING` candidate manually, evaluate it, and record its rollback target.
 6. Add the Privacy and Credit Aftersales manifests only after their isolated Search services,
@@ -221,31 +221,21 @@ remain explicitly out of scope for this first repository version.
 
 ## Snowflake platform layout
 
-The following layout separates reusable agent operations from domain data:
+The selected test deployment keeps all Sof~IA configuration, evaluation and domain
+objects in one existing namespace:
 
 ```text
-AGENT_PLATFORM
-├── CONFIG
-│   ├── agent configuration stage
-│   └── Git repository integration
-├── SKILLS
-│   ├── skill stage or Git-backed skills
-│   └── optional Cortex Extensions
-├── AGENTS
-│   └── versioned Cortex Agent objects
-├── EVALUATIONS
-│   └── approved datasets, runs, and promotion evidence
-└── GOVERNANCE
-    └── catalog, owners, environments, and lifecycle metadata
-
-DATALAB
-├── SPAIN
-│   ├── documents, chunks, secure views, and Search services
-│   └── domain knowledge graph when justified
-└── other domain schemas
+DATALAB.TEST
+├── SOFIA_*_AGENT                 # versioned Cortex Agent objects
+├── SOFIA_*_SEARCH                # policy-isolated Search services
+├── SOFIA_*_CHUNKS                # secure policy source views
+├── SOFIA_EVALUATION_*            # approved cases, runs and results
+└── SOFIA_*                       # lifecycle metadata and future configuration objects
 ```
 
-An agent may use a domain tool only through explicit Snowflake grants. Platform placement never grants cross-domain access.
+This single-namespace decision is specific to the current test environment. An
+agent may use a domain tool only through explicit Snowflake grants; placement
+does not grant cross-policy access.
 
 ## Prompts and skills
 

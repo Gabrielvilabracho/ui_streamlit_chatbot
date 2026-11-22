@@ -58,6 +58,7 @@ class FakeSession:
     "role,policy",
     [
         (ROLE, "GENERAL"),
+        ("DATALAB_TEST_ADMIN", "GENERAL"),
         ("GG_APP_SOYOU_DATALAB_DPO", "PRIVACY"),
         ("GG_APP_SP_DATALAB_CREDIT_AFTERSALES", "CREDIT_AFTERSALES"),
     ],
@@ -70,10 +71,19 @@ def test_viewer_uses_exact_approved_policy(role: str, policy: str) -> None:
     assert session.calls[0][0] == "USE SECONDARY ROLES NONE"
 
 
-@pytest.mark.parametrize(
-    "role", ["ACCOUNTADMIN", "AGENT_STUDIO_USER", "DATALAB_TEST_ADMIN", "", "general"]
-)
+@pytest.mark.parametrize("role", ["ACCOUNTADMIN", "AGENT_STUDIO_USER", "", "general"])
 def test_unknown_role_is_denied_without_agent_call(role: str) -> None:
+    session = FakeSession(role=role)
+    with pytest.raises(ConfigurationError, match="approved document policy"):
+        identify_viewer(session)
+    assert all("DATA_AGENT_RUN" not in sql for sql, _ in session.calls)
+
+
+@pytest.mark.parametrize(
+    "role",
+    ["SECURITYADMIN", "SYSADMIN", "USERADMIN", "DATALAB_TEST_ADMINX", "datalab_test_admin"],
+)
+def test_unlisted_admin_or_near_match_is_denied_without_agent_call(role: str) -> None:
     session = FakeSession(role=role)
     with pytest.raises(ConfigurationError, match="approved document policy"):
         identify_viewer(session)
