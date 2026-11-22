@@ -42,6 +42,7 @@ from rag_chat.infrastructure.snowflake._errors import translate_timeout
 
 AGENT_MODEL = "Managed by Cortex Agent"
 _POLICIES = {
+    "DATALAB_TEST_ADMIN": "GENERAL",
     "GG_APP_SOYOU_DATALAB_USER": "GENERAL",
     "GG_APP_SOYOU_DATALAB_DPO": "PRIVACY",
     "GG_APP_SP_DATALAB_CREDIT_AFTERSALES": "CREDIT_AFTERSALES",

@@ -26,6 +26,7 @@ the application:
 
 | Viewer default role | Agent | Isolated Search source view |
 | --- | --- | --- |
+| `DATALAB_TEST_ADMIN` | `DATALAB.TEST.SOFIA_GENERAL_AGENT` | `DATALAB.TEST.SOFIA_GENERAL_CHUNKS` |
 | `GG_APP_SOYOU_DATALAB_USER` | `DATALAB.TEST.SOFIA_GENERAL_AGENT` | `DATALAB.TEST.SOFIA_GENERAL_CHUNKS` |
 | `GG_APP_SOYOU_DATALAB_DPO` | `DATALAB.TEST.SOFIA_PRIVACY_AGENT` | `DATALAB.TEST.SOFIA_PRIVACY_CHUNKS` |
 | `GG_APP_SP_DATALAB_CREDIT_AFTERSALES` | `DATALAB.TEST.SOFIA_CREDIT_AFTERSALES_AGENT` | `DATALAB.TEST.SOFIA_CREDIT_AFTERSALES_CHUNKS` |
@@ -48,9 +49,10 @@ the application:
    not an assumed built-in privilege or a role this app activates.
 
 The app disables secondary roles and matches only the exact default primary role
-returned by Snowflake. A different role, including the app owner role, is denied.
-There is no role picker and no implicit GENERAL inheritance. Account role inheritance
-and existing broader grants must still be audited: application routing is not a
+returned by Snowflake. `DATALAB_TEST_ADMIN` and the general consumer role both
+route to the isolated GENERAL agent; every other unlisted role is denied. There is
+no role picker and no implicit GENERAL inheritance. Account role inheritance and
+existing broader grants must still be audited: application routing is not a
 replacement for Snowflake authorization or corpus isolation.
 
 ## Snowsight upload preparation
@@ -107,9 +109,10 @@ and AppTest are insufficient:
   including a Snowsight-selected role different from their default role.
 - Prove DATA_AGENT_RUN works through that same restricted caller session, with
   only the intended caller grants. If unsupported, stop: do not use owner REST.
-- For each of the three roles, prove own-policy retrieval succeeds and other-policy
-  agent/Search access fails. Also test an unauthorized default role and inspect
-  inherited/public grants. Empty PRIVACY/CREDIT_AFTERSALES must not reveal GENERAL.
+- For `DATALAB_TEST_ADMIN` and each consumer role, prove own-policy retrieval
+  succeeds and other-policy agent/Search access fails. Also test an unauthorized
+  default role and inspect inherited/public grants. Empty PRIVACY/CREDIT_AFTERSALES
+  must not reveal GENERAL.
 - Confirm history/retry and actual citation markers map to the native annotations;
   verify absent usage, tool warnings, timeout behavior and new-viewer isolation.
 - Validate installed packages/assets, native monitoring, Search refresh and the

@@ -2,6 +2,8 @@
 
 The design keeps the Streamlit rerun model and Snowflake provider details at the edges. Domain and application code can be tested without credentials, a browser, or a Snowflake account.
 
+For the proposed cross-project Snowflake agent platform, including versioned agent definitions, reusable skills, promotion, evaluation, and domain isolation, see [Snowflake agent platform architecture](agent-platform-architecture.md). That document is a target architecture; this document describes the current application.
+
 ## Request flow
 
 ```text

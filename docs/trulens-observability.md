@@ -11,8 +11,9 @@ paid AI functions. Never enable either capability from an unreviewed developer e
    [`sql/trulens_observability_grants.sql`](../sql/trulens_observability_grants.sql).
 3. Register `SOFIA_RAG` once in a controlled environment, then apply **Phase 2** to grant
    object usage and revoke the provisioner's `CREATE EXTERNAL AGENT` grant.
-4. Populate the named Snowflake evaluation table, apply **Phase 3** to the evaluator role,
-   and configure a unique run name.
+4. Apply [`sql/evaluation_foundation.sql`](../sql/evaluation_foundation.sql) in the approved
+   account, populate its named evaluation table, apply **Phase 3** to the evaluator role, and
+   configure a unique run name.
 5. Start the run from an operator process, wait for invocation ingestion, then explicitly
    request the allow-listed server-side metrics.
 6. Review traces and evaluation results in Snowsight under **AI & ML → Evaluations**.
@@ -39,7 +40,7 @@ Environment variables and Streamlit secrets use the same field names shown in th
 configuration files. The named table must exist before applying Phase 3 of the grant template.
 
 ```bash
-export TRULENS_EVAL_DATASET="SOFIA.OBSERVABILITY.SOFIA_EVAL_QUESTIONS"
+export TRULENS_EVAL_DATASET="DATALAB.TEST.SOFIA_EVALUATION_CASES"
 export TRULENS_EVAL_RUN="release-2026-11-17"
 export TRULENS_EVAL_JUDGE_MODEL="replace-with-enabled-cortex-model"
 export TRULENS_EVAL_INPUT_COLUMN="QUESTION"
