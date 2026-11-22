@@ -140,13 +140,61 @@ def test_trulens_grants_are_phased_and_allow_named_dataset_reads() -> None:
     assert "Phase 1: before External Agent registration" in grants
     assert "Phase 2: after External Agent registration" in grants
     assert "Phase 3: after the named evaluation table exists" in grants
+    assert "GRANT USAGE ON DATABASE AGENT_PLATFORM TO ROLE SOFIA_RAG_EVALUATOR;" in grants
+    assert "GRANT USAGE ON SCHEMA AGENT_PLATFORM.EVALUATIONS TO ROLE SOFIA_RAG_EVALUATOR;" in grants
     assert (
-        "GRANT SELECT ON TABLE SOFIA.OBSERVABILITY.SOFIA_EVAL_QUESTIONS\n"
+        "GRANT SELECT ON TABLE AGENT_PLATFORM.EVALUATIONS.EVALUATION_CASES\n"
         "    TO ROLE SOFIA_RAG_EVALUATOR;"
     ) in grants
     assert "GRANT READ UNREDACTED AI OBSERVABILITY EVENTS TABLE" not in "\n".join(
         line for line in grants.splitlines() if not line.lstrip().startswith("--")
     )
+
+
+def test_evaluation_foundation_prepares_empty_platform_datasets_without_scheduling() -> None:
+    foundation = read("sql/evaluation_foundation.sql")
+
+    for table in (
+        "AGENT_PLATFORM.EVALUATIONS.EVALUATION_CASES",
+        "AGENT_PLATFORM.EVALUATIONS.EVALUATION_RUNS",
+        "AGENT_PLATFORM.EVALUATIONS.EVALUATION_RESULTS",
+        "AGENT_PLATFORM.EVALUATIONS.FEEDBACK_SAMPLES",
+    ):
+        assert f"CREATE TABLE IF NOT EXISTS {table}" in foundation
+
+    for column in (
+        "QUESTION VARCHAR NOT NULL",
+        "EXPECTED_ANSWER VARCHAR",
+        "POLICY VARCHAR NOT NULL",
+        "APPROVED_FOR_EVALUATION BOOLEAN NOT NULL DEFAULT FALSE",
+        "RETRIEVAL_CONFIGURATION VARIANT",
+        "TRACE_REFERENCE VARCHAR",
+    ):
+        assert column in foundation
+
+    executable_lines = "\n".join(
+        line for line in foundation.splitlines() if not line.lstrip().startswith("--")
+    )
+    assert "INSERT INTO" not in executable_lines
+    assert "CREATE TASK" not in executable_lines
+
+
+def test_evaluation_examples_and_grants_preserve_platform_dataset_contract() -> None:
+    target = "AGENT_PLATFORM.EVALUATIONS.EVALUATION_CASES"
+    environment = read("config/environment-variables.example.txt")
+    settings = read("config/snowflake-settings.example.toml")
+    runbook = read("docs/trulens-observability.md")
+    grants = read("sql/trulens_observability_grants.sql")
+
+    assert f"TRULENS_EVAL_DATASET={target}" in environment
+    assert f'dataset = "{target}"' in settings
+    assert f'export TRULENS_EVAL_DATASET="{target}"' in runbook
+    assert (
+        "GRANT USAGE ON EXTERNAL AGENT SOFIA.OBSERVABILITY.SOFIA_RAG\n"
+        "    TO ROLE SOFIA_RAG_EVALUATOR;"
+    ) in grants
+    for privilege in ("INSERT", "UPDATE", "DELETE", "TRUNCATE"):
+        assert f"GRANT {privilege} ON TABLE AGENT_PLATFORM" not in grants
 
 
 def test_streamlit_theme_exposes_complete_native_light_and_dark_modes() -> None:
