@@ -11,13 +11,15 @@ Delivery: local feature branch; no Snowflake authentication, account execution, 
 
 ## Tasks
 
-- T1 [S1-S4] — inline; status: in progress; route: inline because agent manifests, prompt composition, evaluation references and their validation form one dependent behavior.
-- T2 [S1-S4] — inline; status: pending; prepare idempotent deployment templates and project documentation without account mutations.
-- T3 [S1-S4] — inline; status: pending; validate generated artifacts, environment boundaries and regression coverage.
+- T1 [S1-S4] — inline; status: completed; commit: `2b45bfd`; route: inline because agent manifests, prompt composition, evaluation references and their validation form one dependent behavior.
+- T2 [S1-S4] — inline; status: completed; commit: `2b45bfd`; retarget evaluation SQL, configuration examples, grants and documentation to `DATALAB.TEST` without account mutations.
+- T3 [S1-S4] — inline; status: completed; commit: `2b45bfd`; deterministic build, focused/full regressions, static checks and independent security verification passed.
 
 ## Log
 
 - L1 — User request verbatim: «lo que quiero que preparaemos el codigo para dejarlo listo para yo implementarlo al subirlo a la cuenta. y los permisos del rol son de SYSADMIN , confirmo base de datos DATALAB schema TEST. warehouse DATALAB_TEST_WH si existe».
 - L2 — User confirmation verbatim: «DATALAB_TEST_ADMIN».
 - L3 — Existing local adapter already targets `DATALAB.TEST`, uses caller-bound access, and now maps exactly `DATALAB_TEST_ADMIN` to the isolated GENERAL agent. Native RBAC and runtime compatibility remain deployment evidence, not local-test claims.
+- L5 — Added the local `agent_platform/` source-of-truth package: prompt layers, GENERAL manifest, project/evaluation metadata, and a standard-library TOML validator/builder. It generates a deterministic, deployment-neutral JSON artifact and a source-hash manifest; it neither authenticates nor contacts Snowflake.
+- L6 — RED: package and namespace assertions failed before the implementation. GREEN: focused platform/project/agent tests, full suite, Ruff, mypy and diff checks passed. Independent verification required staging the package and removing a stale `AGENT_PLATFORM` mention from the AI-functions plan; the targeted recheck passed. Native Snowflake grants, agent creation and runtime behavior remain deployment acceptance work.
 - L4 — User decision verbatim: «dejalo todo en - Database: DATALAB\n- Schema: TEST». Evaluation datasets, results and platform metadata belong in `DATALAB.TEST`; no separate `AGENT_PLATFORM` database is part of this deployment package.
