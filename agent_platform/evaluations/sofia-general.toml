@@ -1,9 +1,0 @@
-[evaluation]
-dataset = "DATALAB.TEST.SOFIA_EVALUATION_CASES"
-runs_table = "DATALAB.TEST.SOFIA_EVALUATION_RUNS"
-results_table = "DATALAB.TEST.SOFIA_EVALUATION_RESULTS"
-policy = "GENERAL"
-
-[thresholds]
-groundedness = 0.9
-answer_relevance = 0.8
