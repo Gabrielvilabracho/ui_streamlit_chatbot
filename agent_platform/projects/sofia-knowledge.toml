@@ -1,6 +1,0 @@
-[project]
-name = "sofia-knowledge"
-database = "DATALAB"
-schema = "TEST"
-warehouse = "DATALAB_TEST_WH"
-owner_role = "DATALAB_TEST_ADMIN"
